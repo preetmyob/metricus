@@ -68,36 +68,54 @@ namespace Metricus.Plugin
                 // "Listen" to the process id counters to map instance names to process id's
                 metric m;
                 int wpId;
-                var originalMetricsCount = metrics.Count;                
-                for (int x = 0; x < originalMetricsCount;x++ )
+                var originalMetricsCount = metrics.Count;
+                Console.WriteLine("=======================");
+                for (int x = 0; x < originalMetricsCount; x++)
                 {
                     m = metrics[x];
+
+                    Console.WriteLine($"{x}: Category: {m.category}, Type: {m.type}, Instance: {m.instance}, Value: {(int)m.value}");
+
                     if (m.category != IdCategory)
                         continue;
-                    if (m.type == IdCounter)
+                    if (m.type.Equals(IdCounter, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        WpNamesToIds[m.instance] = (int)m.value;
+                        Console.WriteLine($"  Storing {m.instance} -> {(int)m.value}");
+                        WpNamesToIds[m.instance] = (int) m.value;
                         continue;
                     }
-
+                }
+                for (int x = 0; x < originalMetricsCount; x++)
+                { 
+                    m = metrics[x];
+                    Console.WriteLine($"Metric {x}:");
+                    Console.WriteLine($"  instance name = {m.instance}");
                     if (m.instance.StartsWith("w3wp", StringComparison.Ordinal) && WpNamesToIds.TryGetValue(m.instance, out wpId))
                     {
+                        Console.WriteLine($"  process id = {wpId}");
                         for (int y = 0; y < serverManager.WorkerProcesses.Count; y++)
                         {
                             if (serverManager.WorkerProcesses[y].ProcessId == wpId)                            
                             {
+                                Console.WriteLine($"  match found: {wpId} -> {serverManager.WorkerProcesses[y].AppPoolName}");
+
                                 m.instance = serverManager.WorkerProcesses[y].AppPoolName;
                                 switch(preserveOriginal)
                                 {
                                     case true:
-                                        metrics.Add(m); break;
+                                        metrics.Add(m);
+                                        break;
                                     case false:
-                                        metrics[x] = m; break;
+                                        Console.WriteLine("  (updated metrics)");
+                                        metrics[x] = m;
+                                        break;
                                 }
                             }
                         }
                     }                    
                 }
+                Console.WriteLine("=======================");
+
                 return metrics;
             }
         }
@@ -135,18 +153,26 @@ namespace Metricus.Plugin
         }
 		
 		public void LoadSites() {
-            lock (RefreshLock)
-            {
-                if(ServerManager != null)
-                    ServerManager.Dispose();
-                ServerManager = new Microsoft.Web.Administration.ServerManager();
-                siteIDtoName.Clear();
-                foreach (var site in ServerManager.Sites)
+		    lock (RefreshLock)
+		    {
+		        try
+		        {
+		            if (ServerManager != null)
+		                ServerManager.Dispose();
+		            ServerManager = new Microsoft.Web.Administration.ServerManager();
+		            siteIDtoName.Clear();
+		            foreach (var site in ServerManager.Sites)
+		            {
+		                this.siteIDtoName.Add((int) site.Id, site.Name);
+		            }
+
+		            this.siteIDtoName.PrintDump();
+		        }
+		        catch (Exception e)
                 {
-                    this.siteIDtoName.Add((int)site.Id, site.Name);
+                    Console.WriteLine("Exception Caught");
                 }
-                this.siteIDtoName.PrintDump();
-            }
-		} 
+		    }
+        } 
 	}
 }

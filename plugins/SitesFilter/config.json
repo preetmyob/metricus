@@ -1,10 +1,12 @@
 {
-	"Categories" : {
-		"ASP.NET Applications" : {
-			"PreserveOriginal" : False	
-		},
-		"Process" : {
-			"PreserveOriginal" : False
-		}
-	}
+  "Categories" : {
+    "ASP.NET Applications" : {
+      "Filters": ["lmw3svc"],
+      "PreserveOriginal" : false	
+    },
+    "Process": {
+      "Filters": [ "w3wp" ],
+      "PreserveOriginal": false
+    }
+  }
 }

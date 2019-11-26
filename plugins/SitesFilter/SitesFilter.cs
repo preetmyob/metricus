@@ -9,7 +9,12 @@ using System.Linq;
 
 namespace Metricus.Plugin
 {
-	public class SitesFilter : FilterPlugin, IFilterPlugin
+    interface ICategoryFilter
+    {
+        List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal);
+    }
+
+    public class SitesFilter : FilterPlugin, IFilterPlugin
 	{
 		private SitesFilterConfig config;
 		private Dictionary<int, string> siteIDtoName;
@@ -22,6 +27,7 @@ namespace Metricus.Plugin
 		}
 
 		private class ConfigCategory {
+            public List<string> Filters { get; set; }
 			public bool PreserveOriginal { get; set; }
 		}
 
@@ -44,43 +50,66 @@ namespace Metricus.Plugin
             LoadSitesTimer.Start();
 		}
 
-		public override List<metric> Work(List<metric> m) {
-            lock(RefreshLock)
+		public override List<metric> Work(List<metric> m)
+		{
+		    lock (RefreshLock)
+		    {
+		        var filterMap = new Dictionary<string, ICategoryFilter>
+		        {
+		            {"w3wp", new FilterWorkerPoolProcesses(ServerManager)},
+		            {"aspnet", new FilterAspNetC(this.siteIDtoName)},
+		            {"lmw3svc", new FilterW3SvcW3Wp()}
+		        };
+
+		        foreach (var category in config.Categories)
+		            foreach (var filter in category.Value.Filters)
+		                if (filterMap.ContainsKey(filter))
+		                    m = filterMap[filter].Filter(m, category.Key, category.Value.PreserveOriginal);
+		    }
+		    /*
+            lock (RefreshLock)
             {
                 if (config.Categories.ContainsKey(ConfigCategories.AspNetApplications))
-                {
                     m = FilterAspNetC.Filter(m, this.siteIDtoName, config.Categories[ConfigCategories.AspNetApplications].PreserveOriginal);
-                }
+                
                 if (config.Categories.ContainsKey(ConfigCategories.Process))
                     m = FilterWorkerPoolProcesses.Filter(m, ServerManager, config.Categories[ConfigCategories.Process].PreserveOriginal);
             }
+            */
+
 			return m;
 		}
 
-        public class FilterWorkerPoolProcesses
+
+
+        public class FilterWorkerPoolProcesses : ICategoryFilter
         {
             public static string IdCategory = ConfigCategories.Process;
             public static string IdCounter = "ID Process";
             public static Dictionary<string, int> WpNamesToIds = new Dictionary<string, int>();
 
-            public static List<metric> Filter(List<metric> metrics, ServerManager serverManager,bool preserveOriginal)
+            private ServerManager serverManager;
+
+            public FilterWorkerPoolProcesses(ServerManager serverManager)
+            {
+                this.serverManager = serverManager;
+            }
+
+            public List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal)
             {
                 // "Listen" to the process id counters to map instance names to process id's
                 metric m;
                 int wpId;
                 var originalMetricsCount = metrics.Count;
-                Console.WriteLine("=======================");
                 for (int x = 0; x < originalMetricsCount; x++)
                 {
                     m = metrics[x];
 
-                    Console.WriteLine($"{x}: Category: {m.category}, Type: {m.type}, Instance: {m.instance}, Value: {(int)m.value}");
-
                     if (m.category != IdCategory)
                         continue;
+
                     if (m.type.Equals(IdCounter, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        Console.WriteLine($"  Storing {m.instance} -> {(int)m.value}");
                         WpNamesToIds[m.instance] = (int) m.value;
                         continue;
                     }
@@ -88,17 +117,16 @@ namespace Metricus.Plugin
                 for (int x = 0; x < originalMetricsCount; x++)
                 { 
                     m = metrics[x];
-                    Console.WriteLine($"Metric {x}:");
-                    Console.WriteLine($"  instance name = {m.instance}");
+
+                    if(!m.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase))
+                        continue;
+
                     if (m.instance.StartsWith("w3wp", StringComparison.Ordinal) && WpNamesToIds.TryGetValue(m.instance, out wpId))
                     {
-                        Console.WriteLine($"  process id = {wpId}");
                         for (int y = 0; y < serverManager.WorkerProcesses.Count; y++)
                         {
                             if (serverManager.WorkerProcesses[y].ProcessId == wpId)                            
                             {
-                                Console.WriteLine($"  match found: {wpId} -> {serverManager.WorkerProcesses[y].AppPoolName}");
-
                                 m.instance = serverManager.WorkerProcesses[y].AppPoolName;
                                 switch(preserveOriginal)
                                 {
@@ -106,7 +134,6 @@ namespace Metricus.Plugin
                                         metrics.Add(m);
                                         break;
                                     case false:
-                                        Console.WriteLine("  (updated metrics)");
                                         metrics[x] = m;
                                         break;
                                 }
@@ -114,24 +141,75 @@ namespace Metricus.Plugin
                         }
                     }                    
                 }
-                Console.WriteLine("=======================");
-
                 return metrics;
             }
         }
 
-        public class FilterAspNetC
+	    public class FilterW3SvcW3Wp : ICategoryFilter
+        {
+	        private static Regex AppPoolRegex = new Regex(@"\d+_(?<AppPool>.*)");
+
+            public List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal)
+            {
+                var returnMetrics = new List<metric>();
+
+                foreach (var metric in metrics)
+                {
+                    var newMetric = metric;
+
+                    if (!metric.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        returnMetrics.Add(newMetric);
+                        continue;
+                    }
+
+                    var match = AppPoolRegex.Match(metric.instance);
+                    if (!match.Success)
+                    {
+                        returnMetrics.Add(metric);
+                    }
+                    else
+                    {
+                        var appPool = match.Groups["AppPool"].Value;
+
+                        newMetric.instance = appPool;
+                        returnMetrics.Add(newMetric);
+
+                        if (preserveOriginal)
+                            returnMetrics.Add(metric);
+                    }
+                }
+
+                return returnMetrics;
+            }
+        }
+
+        public class FilterAspNetC : ICategoryFilter
         {
             private static string PathSansId = "_LM_W3SVC";
             private static Regex MatchPathWithId = new Regex("_LM_W3SVC_(\\d+)_");
             private static Regex MatchRoot = new Regex("ROOT_?");
 
-            public static List<metric> Filter(List<metric> metrics, Dictionary<int,string> siteIdsToNames, bool preserveOriginal)
+            private readonly Dictionary<int, string> siteIdsToNames;
+
+            public FilterAspNetC(Dictionary<int, string> siteIdsToNames)
+            {
+                this.siteIdsToNames = siteIdsToNames;
+            }
+
+            public List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal)
             {
                 var returnMetrics = new List<metric>();
                 foreach (var metric in metrics)
                 {
                     var newMetric = metric;
+
+                    if (!metric.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        returnMetrics.Add(newMetric);
+                        continue;
+                    }
+
                     if (metric.instance.Contains(PathSansId))
                     {
                         var match = MatchPathWithId.Match(metric.instance);
@@ -139,7 +217,7 @@ namespace Metricus.Plugin
                         string siteName;
                         if (siteIdsToNames.TryGetValue(int.Parse(id), out siteName))
                         {
-                            newMetric.instance = Regex.Replace(metric.instance, "_LM_W3SVC_(\\d+)_ROOT_?", siteName + "/");
+                            newMetric.instance = Regex.Replace(metric.instance, "_LM_W3SVC_(\\d+)_ROOT_?", siteName);
                             returnMetrics.Add(newMetric);
                         }
                         if (preserveOriginal)

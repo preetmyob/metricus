@@ -10,40 +10,9 @@
       ]
     },
     {
-      "name": "Memory",
-      "counters": [
-        "Available MBytes",
-        "Pages Input/sec",
-        "% Committed Bytes In Use"
-      ]
-    },
-    {
-      "name": "ASP.NET Applications",
-      "dynamic": true,
-      "counters": [
-        "Errors Total/Sec",
-        "Requests/Sec",
-        "Request Execution Time",
-        "Requests Executing",
-        "Request Wait Time",
-        "Compilations Total",
-        "% Managed Processor Time (estimated)"
-      ]
-    },
-    {
-      "name": "ASP.NET",
-      "counters": [
-        "Application Restarts",
-        "Applications Running",
-        "Error Events Raised",
-        "Request Execution Time",
-        "Requests Current",
-        "Requests Queued"
-      ]
-    },
-    {
       "name": ".NET CLR Memory",
       "dynamic": true,
+      "instance_regex": "^metr",
       "counters": [
         "# Gen 0 Collections",
         "# Gen 1 Collections",
@@ -53,65 +22,11 @@
       ]
     },
     {
-      "name": ".NET CLR Jit",
-      "counters": [
-        "% Time in Jit",
-        "# of Methods Jitted"
-      ],
-      "instances": [
-        "_Global_"
-      ]
-    },
-    {
-      "name": "Network Interface",
-      "counters": [
-        "Bytes Sent/sec",
-        "Bytes Received/sec",
-        "Bytes Total/sec",
-        "Packets Sent/sec",
-        "Packets Received/sec",
-        "Packets/sec",
-        "Packets Received Errors",
-        "Packets Outbound Errors",
-        "Packets Received Discarded",
-        "Packets Outbound Discarded"
-      ]
-    },
-    {
-      "name": "PhysicalDisk",
-      "counters": [
-        "Disk Transfers/sec",
-        "Disk Reads/sec",
-        "Disk Writes/sec",
-        "Disk Bytes/sec",
-        "Disk Read Bytes/sec",
-        "Disk Write Bytes/sec",
-        "Avg. Disk Queue Length"
-      ]
-    },
-    {
-      "name": "LogicalDisk",
-      "counters": [
-        "% Free Space"
-      ]
-    },
-    {
-      "name": "Process",
+      "name": ".NET CLR LocksAndThreads",
       "dynamic": true,
       "counters": [
-        "% Processor Time",
-        "virtual bytes",
-        "page faults/sec",
-        "working set",
-        "page file bytes",
-        "private bytes",
-        "thread count",
-        "elapsed time",
-        "working set - private",
-        "io read bytes/sec",
-        "io write bytes/sec",
-        "io data bytes/sec",
-        "io other bytes/sec"
+        "contention rate / sec",
+        "total # of contentions"
       ]
     }
   ]

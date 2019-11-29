@@ -47,15 +47,17 @@ namespace Metricus.Plugins
             public int dynamicInterval { get; set; }
             public Regex instanceRegex { get; set; }
             private System.Timers.Timer UpdateTimer;
-			public Category(string name) {
+		    public List<string> namedInstances;
+
+		    public Category(string name) {
 				this.name = name;
 				counters = new Dictionary<Tuple<string, string>, PerformanceCounter>();
 			}
 
 		    public void RegisterCounter(string counterName, string instanceName = "", Regex regex = null)
 		    {
-                if(instanceName != null)
-		            Console.WriteLine("Registering instance {0}", instanceName);
+                //if(regex == null && !string.IsNullOrEmpty(instanceName))
+		        //    Console.WriteLine("Registering instance {0}", instanceName);
 
                 var key = Tuple.Create (counterName, instanceName);
                 lock (counters)
@@ -68,6 +70,8 @@ namespace Metricus.Plugins
                             {
                                 if (regex.IsMatch(instanceName))
                                 {
+                                    Console.WriteLine($"Registering regex instance: {name} - {counterName} - {instanceName}");
+
                                     var counter = new PerformanceCounter(this.name, counterName, instanceName);
                                     counter.NextValue();
                                     this.counters.Add(key, counter);
@@ -75,6 +79,8 @@ namespace Metricus.Plugins
                             }
                             else
                             {
+                                Console.WriteLine($"Registering instance: {name} - {counterName} - {instanceName}");
+
                                 var counter = new PerformanceCounter(this.name, counterName, instanceName);
                                 counter.NextValue();
                                 this.counters.Add(key, counter);
@@ -103,14 +109,47 @@ namespace Metricus.Plugins
                     this.UnRegisterCounter(staleCounterKey.Item1, staleCounterKey.Item2);
             }
 
-			public void LoadInstances() {
-				Console.WriteLine ("Loading instances for category {0}", this.name);
+			public void LoadInstancesOld() {
+				//Console.WriteLine ("Loading instances for category {0}", this.name);
 				var category = new PerformanceCounterCategory (this.name);
+
+                // I think this is still ignoring the instance_regex config
 				var instanceNames = category.GetInstanceNames ();
 				foreach (var instance in instanceNames)
 					foreach( var counterName in this.counterNames)                        
 						this.RegisterCounter (counterName, instance);								
 			}
+
+		    public void LoadInstances()
+		    {
+		        foreach (var counter in counterNames)
+		        {
+		            var category = new PerformanceCounterCategory(name);
+		            var instanceNames = category.GetInstanceNames();
+
+                    // Add any named instances (e.g. "nxlog")
+                    // (You can add both named and regex instances)
+                    if (namedInstances != null)
+		                foreach (var configInstance in namedInstances)
+		                    RegisterCounter(counter, configInstance);
+
+                    // Add any instances matching the regex pattern (e.g. "^w3wp")
+                    // (You can add both named and regex instances)
+                    if (instanceRegex != null)
+		                if (instanceNames.Length != 0) // SingleInstance metrics are ignored for regexs
+		                    foreach (var instanceName in instanceNames)
+		                        RegisterCounter(counter, instanceName, instanceRegex);
+
+		            // If there are no named OR regex instances, add all instances,
+		            // or just the category if its a SingleInstance metric
+		            if (namedInstances == null && instanceRegex == null)
+		                if (instanceNames.Length == 0)
+		                    RegisterCounter(counter);
+		                else
+		                    foreach (var instanceName in instanceNames)
+		                        RegisterCounter(counter, instanceName);
+		        }
+		    }
 
             public void EnableRefresh()
             {
@@ -123,7 +162,7 @@ namespace Metricus.Plugins
 
 		public override List<metric> Work()
 		{
-			var metrics = new List<metric>();
+            var metrics = new List<metric>();
             var time = DateTime.Now;
 			foreach( var category in this.categories )
 			{
@@ -154,7 +193,8 @@ namespace Metricus.Plugins
                 category.RemoveStaleCounters(staleCounterKeys);
 			}
 			Console.WriteLine ("Collected {0} metrics", metrics.Count);
-			return metrics;
+
+            return metrics;
 		}
 
 		private void LoadCounters()
@@ -170,18 +210,21 @@ namespace Metricus.Plugins
 				newCategory.dynamic = configCategory.dynamic;
                 newCategory.dynamicInterval = configCategory.dynamic_interval;
 				newCategory.counterNames = configCategory.counters;
+			    newCategory.namedInstances = configCategory.instances;
 
-				foreach (var counter in configCategory.counters)
+                newCategory.LoadInstances();
+#if false
+                foreach (var counter in configCategory.counters)
 				{
                     // Add any named instances (e.g. "nxlog")
                     // (You can add both named and regex instances)
-					if (configCategory.instances != null)
-						foreach (var configInstance in configCategory.instances)
+                    if (newCategory.namedInstances != null)
+						foreach (var configInstance in newCategory.namedInstances)
 							newCategory.RegisterCounter(counter, configInstance);
 
                     // Add any instances matching the regex pattern (e.g. "^w3wp")
                     // (You can add both named and regex instances)
-				    if (configCategory.instance_regex != null)
+				    if (newCategory.instanceRegex != null)
 				    {
 				        var instanceNames = performanceCategory.GetInstanceNames();
 
@@ -192,7 +235,7 @@ namespace Metricus.Plugins
 
 				    // If there are no named OR regex instances, add all instances,
                     // or just the category if its a SingleInstance metric
-                    if(configCategory.instances == null && configCategory.instance_regex == null)
+                    if(newCategory.namedInstances == null && newCategory.instanceRegex == null)
                     {
 						var instanceNames = performanceCategory.GetInstanceNames();
 
@@ -202,7 +245,8 @@ namespace Metricus.Plugins
 						    foreach (var instanceName in instanceNames)
 						        newCategory.RegisterCounter(counter, instanceName);
 					}
-				}
+            }
+#endif
 
                 this.categories.Add(newCategory);
                 if (newCategory.dynamic)

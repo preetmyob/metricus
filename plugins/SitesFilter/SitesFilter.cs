@@ -31,12 +31,6 @@ namespace Metricus.Plugin
 			public bool PreserveOriginal { get; set; }
 		}
 
-        public class ConfigCategories
-        {
-            public const string AspNetApplications = "ASP.NET Applications";
-            public const string Process = "Process";
-        }
-
 		public SitesFilter(PluginManager pm) : base(pm)	{
 			var path = Path.GetDirectoryName (Assembly.GetExecutingAssembly().Location);
 			var configFile = path + "/config.json";
@@ -57,8 +51,8 @@ namespace Metricus.Plugin
 		        var filterMap = new Dictionary<string, ICategoryFilter>
 		        {
 		            {"w3wp", new FilterWorkerPoolProcesses(ServerManager)},
-		            {"aspnet", new FilterAspNetC(this.siteIDtoName)},
-		            {"lmw3svc", new FilterW3SvcW3Wp()}
+		            {"lmw3svc", new FilterAspNetC(this.siteIDtoName)},
+		            {"w3svc", new FilterW3SvcW3Wp()}
 		        };
 
 		        foreach (var category in config.Categories)
@@ -84,7 +78,7 @@ namespace Metricus.Plugin
 
         public class FilterWorkerPoolProcesses : ICategoryFilter
         {
-            public static string IdCategory = ConfigCategories.Process;
+            public static string IdCategory = "Process";
             public static string IdCounter = "ID Process";
             public static Dictionary<string, int> WpNamesToIds = new Dictionary<string, int>();
 
@@ -127,6 +121,7 @@ namespace Metricus.Plugin
                         {
                             if (serverManager.WorkerProcesses[y].ProcessId == wpId)                            
                             {
+                                //Console.WriteLine($"{categoryName}: {m.instance} -> {serverManager.WorkerProcesses[y].AppPoolName}");
                                 m.instance = serverManager.WorkerProcesses[y].AppPoolName;
                                 switch(preserveOriginal)
                                 {
@@ -159,7 +154,7 @@ namespace Metricus.Plugin
 
                     if (!metric.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        returnMetrics.Add(newMetric);
+                        returnMetrics.Add(metric);
                         continue;
                     }
 
@@ -173,6 +168,7 @@ namespace Metricus.Plugin
                         var appPool = match.Groups["AppPool"].Value;
 
                         newMetric.instance = appPool;
+                        //Console.WriteLine($"{categoryName}: {metric.instance} -> {newMetric.instance}");
                         returnMetrics.Add(newMetric);
 
                         if (preserveOriginal)
@@ -218,6 +214,7 @@ namespace Metricus.Plugin
                         if (siteIdsToNames.TryGetValue(int.Parse(id), out siteName))
                         {
                             newMetric.instance = Regex.Replace(metric.instance, "_LM_W3SVC_(\\d+)_ROOT_?", siteName);
+                            //Console.WriteLine($"{categoryName}: {metric.instance} -> {newMetric.instance}");
                             returnMetrics.Add(newMetric);
                         }
                         if (preserveOriginal)
@@ -235,8 +232,7 @@ namespace Metricus.Plugin
 		    {
 		        try
 		        {
-		            if (ServerManager != null)
-		                ServerManager.Dispose();
+		            ServerManager?.Dispose();
 		            ServerManager = new Microsoft.Web.Administration.ServerManager();
 		            siteIDtoName.Clear();
 		            foreach (var site in ServerManager.Sites)
@@ -246,9 +242,9 @@ namespace Metricus.Plugin
 
 		            this.siteIDtoName.PrintDump();
 		        }
-		        catch (Exception e)
+		        catch (Exception)
                 {
-                    Console.WriteLine("Exception Caught");
+                    Console.WriteLine("Exception caught while loading IIS site information");
                 }
 		    }
         } 

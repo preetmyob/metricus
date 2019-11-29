@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 
 namespace Metricus.Plugin
@@ -96,17 +97,14 @@ namespace Metricus.Plugin
 		{
 			foreach (InputPlugin iPlugin in inputPlugins) 
 			{
-				var results = iPlugin.Work ();
+                var results = iPlugin.Work ();
 
-				foreach (FilterPlugin fPlugin in filterPlugins) {
-					results = fPlugin.Work (results);
-				}
+                foreach (FilterPlugin fPlugin in filterPlugins)
+                    results = fPlugin.Work (results);
 
-				foreach ( OutputPlugin oPlugin in outputPlugins)
-				{
+                foreach ( OutputPlugin oPlugin in outputPlugins)
                     oPlugin.Work(results);
-				}
-			}
+            }
 		}
 
 	}

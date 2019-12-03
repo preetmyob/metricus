@@ -50,7 +50,8 @@ namespace Metricus.Plugin
 		    {
 		        var filterMap = new Dictionary<string, ICategoryFilter>
 		        {
-		            {"w3wp", new FilterWorkerPoolProcesses(ServerManager)},
+		            {"w3wp.process", new FilterWorkerPoolProcesses(ServerManager, "Process", "ID Process")},
+		            {"w3wp.net", new FilterWorkerPoolProcesses(ServerManager, ".NET CLR Memory", "Process ID")},
 		            {"lmw3svc", new FilterAspNetC(this.siteIDtoName)},
 		            {"w3svc", new FilterW3SvcW3Wp()}
 		        };
@@ -60,33 +61,23 @@ namespace Metricus.Plugin
 		                if (filterMap.ContainsKey(filter))
 		                    m = filterMap[filter].Filter(m, category.Key, category.Value.PreserveOriginal);
 		    }
-		    /*
-            lock (RefreshLock)
-            {
-                if (config.Categories.ContainsKey(ConfigCategories.AspNetApplications))
-                    m = FilterAspNetC.Filter(m, this.siteIDtoName, config.Categories[ConfigCategories.AspNetApplications].PreserveOriginal);
-                
-                if (config.Categories.ContainsKey(ConfigCategories.Process))
-                    m = FilterWorkerPoolProcesses.Filter(m, ServerManager, config.Categories[ConfigCategories.Process].PreserveOriginal);
-            }
-            */
 
 			return m;
 		}
 
-
-
         public class FilterWorkerPoolProcesses : ICategoryFilter
         {
-            public static string IdCategory = "Process";
-            public static string IdCounter = "ID Process";
             public static Dictionary<string, int> WpNamesToIds = new Dictionary<string, int>();
 
             private ServerManager serverManager;
+            private readonly string processIdCounter;
+            private readonly string processIdCategory;
 
-            public FilterWorkerPoolProcesses(ServerManager serverManager)
+            public FilterWorkerPoolProcesses(ServerManager serverManager, string processIdCategory, string processIdCounter)
             {
                 this.serverManager = serverManager;
+                this.processIdCounter = processIdCounter;
+                this.processIdCategory = processIdCategory;
             }
 
             public List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal)
@@ -99,10 +90,10 @@ namespace Metricus.Plugin
                 {
                     m = metrics[x];
 
-                    if (m.category != IdCategory)
+                    if (!processIdCategory.Equals(m.category, StringComparison.InvariantCultureIgnoreCase))
                         continue;
 
-                    if (m.type.Equals(IdCounter, StringComparison.InvariantCultureIgnoreCase))
+                    if (m.type.Equals(processIdCounter, StringComparison.InvariantCultureIgnoreCase))
                     {
                         WpNamesToIds[m.instance] = (int) m.value;
                         continue;
@@ -114,6 +105,10 @@ namespace Metricus.Plugin
 
                     if(!m.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase))
                         continue;
+
+                    if (m.category.Equals(processIdCategory, StringComparison.InvariantCultureIgnoreCase) &&
+                        m.type.Equals(processIdCounter, StringComparison.InvariantCultureIgnoreCase))
+                        continue;   // Don't transform the "Process ID" values as all the other transformations rely on it
 
                     if (m.instance.StartsWith("w3wp", StringComparison.Ordinal) && WpNamesToIds.TryGetValue(m.instance, out wpId))
                     {

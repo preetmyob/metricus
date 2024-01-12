@@ -1,5 +1,5 @@
 {
-  "Host" : "laptop_co_nz",
+  "Host" : "preet_windows_machine",
   "Interval" : "2000",
   "ActivePlugins" : [
   	"PerformanceCounter",

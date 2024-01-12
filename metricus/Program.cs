@@ -9,8 +9,10 @@ using System.Text;
 using System.Reflection;
 using System.Collections.Generic;
 using System.Collections;
+using System.Net.Http;
 using Topshelf;
 using ServiceStack.Text;
+using System.Threading.Tasks;
 
 namespace Metricus
 {
@@ -32,14 +34,49 @@ namespace Metricus
 		public MetricusService() 
 		{
 			config = JsonSerializer.DeserializeFromString<MetricusConfig> (File.ReadAllText ("config.json"));
-			Console.WriteLine("Config loaded: {0}", config.Dump() );
+
+            config.Host = GetHostNameAsync().GetAwaiter().GetResult() ?? config.Host;
+
+            Console.WriteLine("Config loaded: {0}", config.Dump() );
 
 			_timer = new System.Timers.Timer (config.Interval);
 			_timer.Elapsed += new ElapsedEventHandler (Tick);
 			pluginManager = new PluginManager (config.Host);
 		}
 
-		public bool Start(HostControl hostControl)
+        async Task<string> GetHostNameAsync()
+        {
+            // Metadata service endpoint on the local instance
+            var metadataServiceEndpoint = "http://169.254.169.254/latest/meta-data/";
+
+            try
+            {
+                using (var httpClient = new HttpClient())
+                {
+                    // Define the tasks for each metadata request
+                    var instanceIdTask = httpClient.GetStringAsync(metadataServiceEndpoint + "instance-id");
+                    var localHostnameTask = httpClient.GetStringAsync(metadataServiceEndpoint + "local-hostname");
+                    //Task<string> publicHostnameTask = httpClient.GetStringAsync(metadataServiceEndpoint + "public-hostname");
+
+                    // Wait for all tasks to complete
+                    await Task.WhenAll(instanceIdTask, localHostnameTask);
+
+                    // Get results from completed tasks
+                    var instanceId = instanceIdTask.Result;
+                    var localHostname = localHostnameTask.Result;
+
+                    // Format the string
+                    return $"{instanceId}-{localHostname}";
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Error: {ex}");
+                return Environment.MachineName;
+            }
+        }
+
+        public bool Start(HostControl hostControl)
 		{
 			this.LoadPlugins ();
 			_timer.Start ();

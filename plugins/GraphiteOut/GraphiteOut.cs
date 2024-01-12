@@ -2,6 +2,7 @@ using System;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.IO;
 using System.Net.Sockets;
@@ -10,11 +11,15 @@ using System.Text;
 using Metricus.Plugin;
 using ServiceStack.Text;
 using Graphite;
+using System.Net.Mail;
+
+
 
 namespace Metricus.Plugins
 {
     public class GraphiteOut : OutputPlugin, IOutputPlugin
     {
+        // ReSharper disable once ClassNeverInstantiated.Local
         class GraphiteOutConfig
         {
             public String Hostname { get; set; }
@@ -38,8 +43,9 @@ namespace Metricus.Plugins
             : base(pm)
         {
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
             config = JsonSerializer.DeserializeFromString<GraphiteOutConfig>(File.ReadAllText(path + "/config.json"));
-            Console.WriteLine("Loaded config : {0}", config.Dump());
+            Console.WriteLine("Loaded config : {0}", config.Dump());    
             this.pm = pm;
             if (config.SendBufferSize == 0) config.SendBufferSize = DefaultSendBufferSize;
             MetricSpool = new BlockingCollection<metric>(config.SendBufferSize);

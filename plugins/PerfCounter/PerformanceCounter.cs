@@ -2,16 +2,14 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Collections.Generic;
-using System.Collections;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
-using System.Threading;
 using ServiceStack.Text;
 using Metricus.Plugin;
 
 namespace Metricus.Plugins
 {
-	public class PerfCounter : InputPlugin, IInputPlugin
+    public class PerfCounter : InputPlugin, IInputPlugin
 	{
 		private List<Category> categories = new List<Category>();
 		private PerfCounterConfig config;

@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using ServiceStack.Text;
 using Microsoft.Web.Administration;
 using System.Text.RegularExpressions;
-using System.Linq;
 
 namespace Metricus.Plugin
 {

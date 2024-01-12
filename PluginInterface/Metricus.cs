@@ -1,13 +1,9 @@
 using System;
-using System.IO;
-using System.Text.RegularExpressions;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Reflection;
 
 namespace Metricus.Plugin
 {
-	public abstract class Plugin
+    public abstract class Plugin
 	{
 		private PluginManager pm;
 

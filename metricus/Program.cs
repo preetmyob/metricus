@@ -1,14 +1,9 @@
 using System;
 using System.Timers;
-using Metricus;
 using Metricus.Plugin;
 using System.Threading;
-using System.Diagnostics;
 using System.IO;
-using System.Text;
-using System.Reflection;
 using System.Collections.Generic;
-using System.Collections;
 using System.Net.Http;
 using Topshelf;
 using ServiceStack.Text;
@@ -16,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Metricus
 {
-	class MetricusConfig
+    class MetricusConfig
 	{
 		public string Host { get; set; }
 		public int Interval { get; set; }

@@ -2,7 +2,6 @@ using System;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.IO;
 using System.Net.Sockets;
@@ -11,7 +10,6 @@ using System.Text;
 using Metricus.Plugin;
 using ServiceStack.Text;
 using Graphite;
-using System.Net.Mail;
 
 
 

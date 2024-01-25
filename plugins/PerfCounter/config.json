@@ -1,33 +1,177 @@
 {
-  "categories": [
-    {
-      "name": "Processor",
-      "counters": [
-        "% Processor Time"
-      ],
-      "instances": [
-        "_total"
-      ]
-    },
-    {
-      "name": ".NET CLR Memory",
-      "dynamic": true,
-      "instance_regex": "^metr",
-      "counters": [
-        "# Gen 0 Collections",
-        "# Gen 1 Collections",
-        "# Gen 2 Collections",
-        "# Bytes in all Heaps",
-        "% Time in GC"
-      ]
-    },
-    {
-      "name": ".NET CLR LocksAndThreads",
-      "dynamic": true,
-      "counters": [
-        "contention rate / sec",
-        "total # of contentions"
-      ]
-    }
-  ]
+	"categories": [
+		{
+			"name": "Processor",
+			"counters": [
+				"% Processor Time"
+			],
+			"instances": [
+				"_total"
+			]
+		},
+		{
+			"name": "TCPv4",
+			"counters": [
+				"connections established",
+				"segments/sec",
+				"segments received/sec",
+				"segments sent/sec",
+				"segments retransmitted/sec"
+			]
+		},
+		{
+			"name": "Paging File",
+			"counters": [
+				"% usage"
+			]
+		},
+		{
+			"name": "Memory",
+			"counters": [
+				"Available MBytes",
+				"Pages Input/sec",
+				"% Committed Bytes In Use"
+			]
+		},
+		{
+			"name": ".NET CLR LocksAndThreads",
+			"dynamic": true,
+			"counters": [
+				"contention rate / sec"
+			]
+		},
+		{
+			"name": "web service",
+			"dynamic": true,
+			"counters": [
+				"bytes sent/sec",
+				"bytes received/sec"
+			]
+		},
+		{
+			"name": ".NET CLR Exceptions",
+			"dynamic": true,
+			"counters": [
+				"# of exceps thrown / sec"
+			]
+		},
+		{
+			"name": "ASP.NET Applications",
+			"dynamic": true,
+			"counters": [
+				"Errors Total/Sec",
+				"Requests/Sec",
+				"Request Execution Time",
+				"Requests Executing",
+				"% Managed Processor Time (estimated)"
+			]
+		},
+		{
+			"name": "ASP.NET",
+			"counters": [
+				"Application Restarts",
+				"Applications Running",
+				"Error Events Raised",
+				"Request Execution Time",
+				"Requests Current",
+				"Requests Queued"
+			]
+		},
+		{
+			"name": ".NET CLR Memory",
+			"dynamic": true,
+			"counters": [
+				"Process ID",
+				"# Gen 0 Collections",
+				"# Gen 1 Collections",
+				"# Gen 2 Collections",
+				"Gen 0 Heap Size",
+				"Gen 1 Heap Size",
+				"Gen 2 Heap Size",
+				"Large Object Heap Size",
+				"allocated bytes/sec",
+				"# Bytes in all Heaps",
+				"# total committed bytes",
+				"# total reserved bytes",
+				"# of pinned objects",
+				"% time in gc"
+			]
+		},
+		{
+			"name": ".NET CLR Jit",
+			"counters": [
+				"% Time in Jit",
+				"# of Methods Jitted"
+			],
+			"instances": [
+				"_Global_"
+			]
+		},
+		{
+			"name": "Network Interface",
+			"counters": [
+				"Bytes Sent/sec",
+				"Bytes Received/sec",
+				"Bytes Total/sec",
+				"Packets Sent/sec",
+				"Packets Received/sec",
+				"Packets/sec",
+				"Packets Received Errors",
+				"Packets Outbound Errors",
+				"Packets Received Discarded",
+				"Packets Outbound Discarded"
+			]
+		},
+		{
+			"name": "PhysicalDisk",
+			"counters": [
+				"Disk Transfers/sec",
+				"Disk Reads/sec",
+				"Disk Writes/sec",
+				"Disk Bytes/sec",
+				"Disk Read Bytes/sec",
+				"Disk Write Bytes/sec",
+				"Avg. Disk Queue Length"
+			]
+		},
+		{
+			"name": "System",
+			"counters": [
+				"context switches/sec",
+				"processes",
+				"threads"
+			]
+		},
+		{
+			"name": "LogicalDisk",
+			"counters": [
+				"% Free Space"
+			]
+		},
+		{
+			"name": "Process",
+			"dynamic": true,
+			"counters": [
+				"id process",
+				"% Processor Time",
+				"page faults/sec",
+				"working set",
+				"private bytes"
+			],
+			"instances": [
+				"_Total",
+				"chef_runner_service",
+				"metricus",
+				"nxlog"
+			],
+			"instance_regex": "^w3wp"
+		},
+		{
+			"name": "W3SVC_W3WP",
+			"dynamic": true,
+			"counters": [
+				"Active Requests"
+			]
+		}
+	]
 }

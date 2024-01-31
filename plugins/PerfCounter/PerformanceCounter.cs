@@ -151,7 +151,7 @@ namespace Metricus.Plugins
 
             public void EnableRefresh()
             {
-                if (dynamicInterval == 0) dynamicInterval = 30000;
+                if (dynamicInterval == 0) dynamicInterval = 300000;
                 UpdateTimer = UpdateTimer ?? new System.Timers.Timer(dynamicInterval);
                 UpdateTimer.Elapsed += (m, e) => { this.LoadInstances(); };
                 UpdateTimer.Start();
@@ -172,6 +172,7 @@ namespace Metricus.Plugins
                         var pc = counter.Value;
                         try
                         {
+							// create a metric based on the performance counter
                             var newMetric = new metric(pc.CategoryName, pc.CounterName, pc.InstanceName, pc.NextValue(), time);
                             metrics.Add(newMetric);
                         }
@@ -190,7 +191,7 @@ namespace Metricus.Plugins
 				//if (category.dynamic) category.LoadInstances ();
                 category.RemoveStaleCounters(staleCounterKeys);
 			}
-			Console.WriteLine ("Collected {0} metrics", metrics.Count);
+			//Console.WriteLine ("Collected {0} metrics", metrics.Count);
 
             return metrics;
 		}

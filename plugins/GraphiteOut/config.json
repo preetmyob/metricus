@@ -1,7 +1,8 @@
 {
   "Hostname": "127.0.0.1",
   "Port": "2003",
-  "Prefix": "advanced._local_.servers",
+  "Prefix": "advanced.env>",
   "SendBufferSize": 500000,
-  "Protocol": "tcp"
+  "Protocol": "tcp",
+  "Debug": true
 }

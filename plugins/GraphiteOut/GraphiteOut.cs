@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Net.Sockets;
 using System.Reflection;
+using System.Security.Policy;
 using System.Text;
 using Metricus.Plugin;
 using ServiceStack.Text;
@@ -25,6 +26,7 @@ namespace Metricus.Plugins
             public int Port { get; set; }
             public string Protocol { get; set; }
             public int SendBufferSize { get; set; }
+            public bool Debug { get; set; }
         }
 
         private PluginManager pm;
@@ -34,6 +36,13 @@ namespace Metricus.Plugins
         private BlockingCollection<metric> MetricSpool;
         private Task WorkMetricTask;
         private int DefaultSendBufferSize = 1000;
+
+        // "Match
+        // one or more whitespace characters
+        // OR a dot OR a forward slash
+        // OR an opening parenthesis
+        // OR a closing parenthesis."
+        // We need to confirm if the regex can be replaced with [\s./()]
         public static readonly string FormatReplacementMatch = "(\\s+|\\.|/|\\(|\\))";
         public static readonly string FormatReplacementString = "_";
 
@@ -93,7 +102,7 @@ namespace Metricus.Plugins
             {
                 try
                 {
-                    tcpClient = tcpClient ?? new MetricusGraphiteTcpClient(config.Hostname, config.Port, config.Prefix + "." + pm.Hostname);
+                    tcpClient = tcpClient ?? new MetricusGraphiteTcpClient(config.Hostname, config.Port, config.Debug);
                     var theMetric = FormatMetric(m);
                     var path = MetricPath(theMetric);
                     tcpClient.Send(path, m.value);
@@ -111,34 +120,90 @@ namespace Metricus.Plugins
 
         private string MetricPath(metric m)
         {
-            var path = m.category;
-            path += (m.instance != "") ? "." + m.instance : ".total";
-            path += "." + m.type;
-            return path.ToLower();
+
+
+
+            // change advanced.env>.##localadv1##.asp_net_applications.errors_total_sec 0 1706667855
+            // into advanced.env>.##localadv1##.<servername>.asp_net_applications.errors_total_sec 0 1706667855
+
+            // prefix
+            //   site
+            //      servername
+            //          category
+            //              counter
+            //                  value
+
+            // old: natasha.production.stacks.
+            //      <stackname>
+            //          .counter
+            //                 .value
+
+            var bld = new StringBuilder();
+            
+            AppendIf(bld, config.Prefix);
+            AppendIf(bld, m.site);
+            AppendIf(bld, m.serverName);
+            AppendIf(bld, m.category);
+            AppendIf(bld, m.instance);
+            if (!string.IsNullOrEmpty(m.type))
+            {
+                bld.Append(m.type);
+            }
+
+            return bld.ToString();
+        }
+
+        private void AppendIf(StringBuilder builder, string val)
+        {
+            if (!string.IsNullOrEmpty(val))
+            {
+                builder.Append(val);
+                builder.Append(".");
+            }
         }
 
         private metric FormatMetric(metric m)
         {
             m.category = Regex.Replace(m.category, FormatReplacementMatch, FormatReplacementString);
             m.type = Regex.Replace(m.type, FormatReplacementMatch, FormatReplacementString);
-            m.instance = Regex.Replace(m.instance, FormatReplacementMatch, FormatReplacementString);
+
+            
+            if (string.IsNullOrEmpty(m.instance))
+            {
+                m.instance = "_total";
+            }
+            else if(!m.instance.Equals(m.site, StringComparison.OrdinalIgnoreCase))
+            {
+                m.instance = Regex.Replace(m.instance, FormatReplacementMatch, FormatReplacementString);
+            }
+            else
+            {
+                m.instance = null;
+            }
+
+            if (!string.IsNullOrEmpty(m.site))
+            {
+                m.site = Regex.Replace(m.site, FormatReplacementMatch, FormatReplacementString);
+            }
+
+
             return m;
         }
 
         public class MetricusGraphiteTcpClient : IDisposable
         {
-            public string Hostname { get; private set; }
-            public int Port { get; private set; }
-            public string KeyPrefix { get; private set; }
+            public bool IsDebug { get; }
+            public string GraphiteHostname { get; }
+            public TcpClient Client { get; }
+            public int Port { get; }
 
-            private readonly TcpClient _tcpClient;
-
-            public MetricusGraphiteTcpClient(string hostname, int port = 2003, string keyPrefix = null)
+            public MetricusGraphiteTcpClient(string graphiteHostname, int port, bool isDebug = false)
             {
-                Hostname = hostname;
+                this.IsDebug = isDebug;
+                GraphiteHostname = graphiteHostname;
+                this.Port = port;
                 Port = port;
-                KeyPrefix = keyPrefix;
-                _tcpClient = new TcpClient(Hostname, Port);
+                Client = new TcpClient(GraphiteHostname, Port);
             }
 
             public void Send(string path, float value)
@@ -148,10 +213,16 @@ namespace Metricus.Plugins
 
             public void Send(string path, float value, DateTime timeStamp)
             {
-                    if (!string.IsNullOrWhiteSpace(KeyPrefix))
-                        path = KeyPrefix + "." + path;
-                    var message = Encoding.UTF8.GetBytes(string.Format("{0} {1} {2}\n", path, value, ServiceStack.Text.DateTimeExtensions.ToUnixTime(timeStamp.ToUniversalTime())));
-                    _tcpClient.GetStream().Write(message, 0, message.Length);
+                var graphiteMessage =
+                    $"{path} {value} {ServiceStack.Text.DateTimeExtensions.ToUnixTime(timeStamp.ToUniversalTime())}\n";
+                
+                if (IsDebug)
+                {
+                    Console.WriteLine($"Sending msg: {graphiteMessage}");
+                }
+
+                var message = Encoding.UTF8.GetBytes(graphiteMessage);
+                Client.GetStream().Write(message, 0, message.Length);
             }
 
             public void Dispose()
@@ -163,8 +234,8 @@ namespace Metricus.Plugins
             protected virtual void Dispose(bool disposing)
             {
                 if (!disposing) return;
-                if (_tcpClient != null)
-                    _tcpClient.Close();
+                if (Client != null)
+                    Client.Close();
             }
 
         }

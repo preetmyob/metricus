@@ -225,4 +225,4 @@ Presentation/DevOps.UI.Mvc
 #Jetbrains editor config
 .idea/
 /developer/MYOB6RTFST2Jae_axisdebugsettings.json
-/store/graphite
+store/

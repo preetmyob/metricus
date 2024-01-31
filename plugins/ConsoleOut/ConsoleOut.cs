@@ -11,8 +11,8 @@ namespace Metricus.Plugins
 
 		public override void Work(List<metric> m)
 		{
-            foreach(var theMetric in m)
-			    Console.WriteLine (JsonConvert.SerializeObject (theMetric, Formatting.Indented));
+			//foreach (var theMetric in m)
+				//Console.WriteLine(JsonConvert.SerializeObject(theMetric, Formatting.Indented));
 		}
 	}
 }

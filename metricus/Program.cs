@@ -46,6 +46,7 @@ namespace Metricus
 
             try
             {
+				Console.WriteLine($"Attempting to get hostname from AWS EC2 Metadata endpoint {metadataServiceEndpoint}");
                 using (var httpClient = new HttpClient())
                 {
                     // Define the tasks for each metadata request
@@ -66,21 +67,21 @@ namespace Metricus
             }
             catch (HttpRequestException ex)
             {
-                Console.WriteLine($"Error: {ex}");
+                Console.WriteLine($"Warning: {ex.Message}. This is probably because you're running it on a non EC2. Default to MachineName in environment");
                 return Environment.MachineName;
             }
         }
 
         public bool Start(HostControl hostControl)
 		{
-			this.LoadPlugins ();
-			_timer.Start ();
+			this.LoadPlugins();
+			_timer.Start();
 			return true;
 		}
 
 		public bool StartRaw()
 		{
-			this.LoadPlugins ();
+			this.LoadPlugins();
 			_timer.Start ();
 			return true;
 		}

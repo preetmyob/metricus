@@ -30,8 +30,6 @@ namespace Metricus
 		{
 			config = JsonSerializer.DeserializeFromString<MetricusConfig> (File.ReadAllText ("config.json"));
 
-            config.Host = GetHostNameAsync().GetAwaiter().GetResult() ?? config.Host;
-
             Console.WriteLine("Config loaded: {0}", config.Dump() );
 
 			_timer = new System.Timers.Timer (config.Interval);
@@ -39,38 +37,6 @@ namespace Metricus
 			pluginManager = new PluginManager (config.Host);
 		}
 
-        async Task<string> GetHostNameAsync()
-        {
-            // Metadata service endpoint on the local instance
-            var metadataServiceEndpoint = "http://169.254.169.254/latest/meta-data/";
-
-            try
-            {
-				Console.WriteLine($"Attempting to get hostname from AWS EC2 Metadata endpoint {metadataServiceEndpoint}");
-                using (var httpClient = new HttpClient())
-                {
-                    // Define the tasks for each metadata request
-                    var instanceIdTask = httpClient.GetStringAsync(metadataServiceEndpoint + "instance-id");
-                    var localHostnameTask = httpClient.GetStringAsync(metadataServiceEndpoint + "local-hostname");
-                    //Task<string> publicHostnameTask = httpClient.GetStringAsync(metadataServiceEndpoint + "public-hostname");
-
-                    // Wait for all tasks to complete
-                    await Task.WhenAll(instanceIdTask, localHostnameTask);
-
-                    // Get results from completed tasks
-                    var instanceId = instanceIdTask.Result;
-                    var localHostname = localHostnameTask.Result;
-
-                    // Format the string
-                    return $"{instanceId}-{localHostname}";
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                Console.WriteLine($"Warning: {ex.Message}. This is probably because you're running it on a non EC2. Default to MachineName in environment");
-                return Environment.MachineName;
-            }
-        }
 
         public bool Start(HostControl hostControl)
 		{
@@ -143,7 +109,6 @@ namespace Metricus
 
 		private void Tick (object source, ElapsedEventArgs e)
 		{
-			Console.WriteLine ("Tick");
             if (Monitor.TryEnter(workLocker))
             {
                 try

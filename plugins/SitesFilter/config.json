@@ -1,4 +1,5 @@
 {
+	"Debug": false,
 	"Categories": {
 		"ASP.NET Applications": {
 			"PreserveOriginal": false,

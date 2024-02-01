@@ -1,10 +1,10 @@
 {
-  "Host" : "preet_windows_machine",
-  "Interval" : "2000",
-  "ActivePlugins" : [
-  	"PerformanceCounter",
-  	"SitesFilter",
-  	"GraphiteOut",
-  	"ConsoleOut"
+  "Host": "preet_windows_machine",
+  "Interval": "2000",
+  "ActivePlugins": [
+    "PerformanceCounter",
+    "SitesFilter",
+    "GraphiteOut",
+    "ConsoleOut"
   ]
 }

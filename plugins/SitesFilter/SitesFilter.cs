@@ -1,9 +1,9 @@
+using Microsoft.Web.Administration;
+using ServiceStack.Text;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Collections.Generic;
-using ServiceStack.Text;
-using Microsoft.Web.Administration;
 using System.Text.RegularExpressions;
 
 namespace Metricus.Plugin
@@ -23,9 +23,11 @@ namespace Metricus.Plugin
 
 		private class SitesFilterConfig {
 			public Dictionary<string,ConfigCategory> Categories { get; set; }
-		}
+            public bool Debug { get; set; }
 
-		private class ConfigCategory {
+        }
+
+        private class ConfigCategory {
             public List<string> Filters { get; set; }
 			public bool PreserveOriginal { get; set; }
 		}
@@ -49,10 +51,10 @@ namespace Metricus.Plugin
 		    {
 		        var filterMap = new Dictionary<string, ICategoryFilter>
 		        {
-		            {"w3wp.process", new FilterWorkerPoolProcesses(ServerManager, "Process", "ID Process")},
-		            {"w3wp.net", new FilterWorkerPoolProcesses(ServerManager, ".NET CLR Memory", "Process ID")},
-		            {"lmw3svc", new FilterAspNetC(this.siteIDtoName)},
-		            {"w3svc", new FilterW3SvcW3Wp()}
+		            {"w3wp.process", new FilterWorkerPoolProcesses(ServerManager, "Process", "ID Process", config.Debug)},
+		            {"w3wp.net", new FilterWorkerPoolProcesses(ServerManager, ".NET CLR Memory", "Process ID", config.Debug)},
+		            {"lmw3svc", new FilterAspNetC(this.siteIDtoName, config.Debug)},
+		            {"w3svc", new FilterW3SvcW3Wp(config.Debug)}
 		        };
 
 		        foreach (var category in config.Categories)
@@ -70,12 +72,14 @@ namespace Metricus.Plugin
 
             private ServerManager serverManager;
             private readonly string processIdCounter;
+            private readonly bool isDebug;
             private readonly string processIdCategory;
 
-            public FilterWorkerPoolProcesses(ServerManager serverManager, string processIdCategory, string processIdCounter)
+            public FilterWorkerPoolProcesses(ServerManager serverManager, string processIdCategory, string processIdCounter, bool isDebug = false)
             {
                 this.serverManager = serverManager;
                 this.processIdCounter = processIdCounter;
+                this.isDebug = isDebug;
                 this.processIdCategory = processIdCategory;
             }
 
@@ -125,10 +129,12 @@ namespace Metricus.Plugin
                                 var newMetric = currentMetric;
 
                                 newMetric.site = siteName;
-                                newMetric.instance = siteName;
-                                Console.WriteLine($"old: {currentMetric}");
-                                Console.WriteLine($"new: {newMetric}");
-
+                                newMetric.instance = null;
+                                if(isDebug)
+                                {
+                                    Console.WriteLine($"old: {currentMetric}");
+                                    Console.WriteLine($"new: {newMetric}");
+                                }
 
                                 if (preserveOriginal)
                                     metrics.Add(currentMetric);
@@ -144,7 +150,13 @@ namespace Metricus.Plugin
 
 	    public class FilterW3SvcW3Wp : ICategoryFilter
         {
-	        private static Regex AppPoolRegex = new Regex(@"\d+_(?<AppPool>.*)");
+            private readonly bool _isDebug;
+            private static Regex AppPoolRegex = new Regex(@"\d+_(?<AppPool>.*)");
+
+            public FilterW3SvcW3Wp(bool isDebug = false)
+            {
+                _isDebug = isDebug;
+            }
 
             public List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal)
             {
@@ -174,8 +186,12 @@ namespace Metricus.Plugin
                         var newMetric = metric;
                         newMetric.site = siteName;
                         newMetric.instance = siteName;
-                        Console.WriteLine($"old: {metric}");
-                        Console.WriteLine($"new: {newMetric}");
+
+                        if(_isDebug)
+                        {
+                            Console.WriteLine($"old: {metric}");
+                            Console.WriteLine($"new: {newMetric}");
+                        }
 
                         if (preserveOriginal)
                             returnMetrics.Add(metric);
@@ -193,10 +209,12 @@ namespace Metricus.Plugin
             private static Regex MatchRoot = new Regex("ROOT_?");
 
             private readonly Dictionary<int, string> siteIdsToNames;
+            private readonly bool _isDebug;
 
-            public FilterAspNetC(Dictionary<int, string> siteIdsToNames)
+            public FilterAspNetC(Dictionary<int, string> siteIdsToNames, bool isDebug = false)
             {
                 this.siteIdsToNames = siteIdsToNames;
+                _isDebug = isDebug;
             }
 
             public List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal)
@@ -221,8 +239,12 @@ namespace Metricus.Plugin
                         {
                             newMetric.site = siteName;
                             newMetric.instance = siteName;
-                            Console.WriteLine($"old: {metric}");
-                            Console.WriteLine($"new: {newMetric}");
+                            if (_isDebug)
+                            {
+                                Console.WriteLine($"old: {metric}");
+                                Console.WriteLine($"new: {newMetric}");
+                            }
+                            
                             returnMetrics.Add(newMetric);
                         }
                         if (preserveOriginal)

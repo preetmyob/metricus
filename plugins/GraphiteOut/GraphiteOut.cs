@@ -11,6 +11,7 @@ using System.Text;
 using Metricus.Plugin;
 using ServiceStack.Text;
 using Graphite;
+using System.Net.Http;
 
 
 
@@ -26,6 +27,7 @@ namespace Metricus.Plugins
             public int Port { get; set; }
             public string Protocol { get; set; }
             public int SendBufferSize { get; set; }
+            public string Servername { get; set; }
             public bool Debug { get; set; }
         }
 
@@ -52,11 +54,47 @@ namespace Metricus.Plugins
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
             config = JsonSerializer.DeserializeFromString<GraphiteOutConfig>(File.ReadAllText(path + "/config.json"));
+            config.Servername = GetHostNameAsync().GetAwaiter().GetResult() ?? config.Servername;
+
             Console.WriteLine("Loaded config : {0}", config.Dump());    
             this.pm = pm;
             if (config.SendBufferSize == 0) config.SendBufferSize = DefaultSendBufferSize;
             MetricSpool = new BlockingCollection<metric>(config.SendBufferSize);
             WorkMetricTask = Task.Factory.StartNew(() => WorkMetrics(), TaskCreationOptions.LongRunning);
+        }
+
+
+        async Task<string> GetHostNameAsync()
+        {
+            // Metadata service endpoint on the local instance
+            var metadataServiceEndpoint = "http://169.254.169.254/latest/meta-data/";
+
+            try
+            {
+                Console.WriteLine($"Attempting to get hostname from AWS EC2 Metadata endpoint {metadataServiceEndpoint}");
+                using (var httpClient = new HttpClient())
+                {
+                    // Define the tasks for each metadata request
+                    var instanceIdTask = httpClient.GetStringAsync(metadataServiceEndpoint + "instance-id");
+                    var localHostnameTask = httpClient.GetStringAsync(metadataServiceEndpoint + "local-hostname");
+                    //Task<string> publicHostnameTask = httpClient.GetStringAsync(metadataServiceEndpoint + "public-hostname");
+
+                    // Wait for all tasks to complete
+                    await Task.WhenAll(instanceIdTask, localHostnameTask);
+
+                    // Get results from completed tasks
+                    var instanceId = instanceIdTask.Result;
+                    var localHostname = localHostnameTask.Result;
+
+                    // Format the string
+                    return $"{instanceId}-{localHostname}";
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Warning: {ex.Message}. This is probably because you're running it on a non EC2. Default to MachineName in environment");
+                return Environment.MachineName;
+            }
         }
 
         public override void Work(List<metric> m)
@@ -77,7 +115,7 @@ namespace Metricus.Plugins
                     shipMethod = (m) => ShipMetricUDP(m); break;
             }
 
-            Boolean done = false;
+            bool done = false;
             while (!done)
             {
                 foreach (var rawMetric in MetricSpool.GetConsumingEnumerable())
@@ -120,37 +158,23 @@ namespace Metricus.Plugins
 
         private string MetricPath(metric m)
         {
-
-
-
-            // change advanced.env>.##localadv1##.asp_net_applications.errors_total_sec 0 1706667855
-            // into advanced.env>.##localadv1##.<servername>.asp_net_applications.errors_total_sec 0 1706667855
-
-            // prefix
-            //   site
-            //      servername
-            //          category
-            //              counter
-            //                  value
-
-            // old: natasha.production.stacks.
-            //      <stackname>
-            //          .counter
-            //                 .value
-
             var bld = new StringBuilder();
             
             AppendIf(bld, config.Prefix);
+
+            bld.Append(!string.IsNullOrEmpty(m.site) ? "site." : "server.");
+
             AppendIf(bld, m.site);
-            AppendIf(bld, m.serverName);
+            AppendIf(bld, config.Servername);
             AppendIf(bld, m.category);
             AppendIf(bld, m.instance);
+            
             if (!string.IsNullOrEmpty(m.type))
             {
                 bld.Append(m.type);
             }
 
-            return bld.ToString();
+            return bld.ToString().ToLower();
         }
 
         private void AppendIf(StringBuilder builder, string val)
@@ -166,7 +190,6 @@ namespace Metricus.Plugins
         {
             m.category = Regex.Replace(m.category, FormatReplacementMatch, FormatReplacementString);
             m.type = Regex.Replace(m.type, FormatReplacementMatch, FormatReplacementString);
-
             
             if (string.IsNullOrEmpty(m.instance))
             {
@@ -186,20 +209,19 @@ namespace Metricus.Plugins
                 m.site = Regex.Replace(m.site, FormatReplacementMatch, FormatReplacementString);
             }
 
-
             return m;
         }
 
         public class MetricusGraphiteTcpClient : IDisposable
         {
-            public bool IsDebug { get; }
+            private readonly bool _isDebug;
             public string GraphiteHostname { get; }
             public TcpClient Client { get; }
             public int Port { get; }
 
             public MetricusGraphiteTcpClient(string graphiteHostname, int port, bool isDebug = false)
             {
-                this.IsDebug = isDebug;
+                _isDebug = isDebug;
                 GraphiteHostname = graphiteHostname;
                 this.Port = port;
                 Port = port;
@@ -216,7 +238,7 @@ namespace Metricus.Plugins
                 var graphiteMessage =
                     $"{path} {value} {ServiceStack.Text.DateTimeExtensions.ToUnixTime(timeStamp.ToUniversalTime())}\n";
                 
-                if (IsDebug)
+                if (_isDebug)
                 {
                     Console.WriteLine($"Sending msg: {graphiteMessage}");
                 }

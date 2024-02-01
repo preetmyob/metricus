@@ -5,11 +5,11 @@ namespace Metricus.Plugin
 {
     public abstract class Plugin
     {
-        private PluginManager pm;
+        private PluginManager _pm;
 
-        public Plugin (PluginManager pm)
+        protected Plugin (PluginManager pm)
         {
-            this.pm = pm;
+            this._pm = pm;
             pm.RegisterPlugin (this);
         }
     
@@ -17,7 +17,7 @@ namespace Metricus.Plugin
 
     public abstract class InputPlugin : Plugin
     {
-        public InputPlugin(PluginManager pm) : base(pm)
+        protected InputPlugin(PluginManager pm) : base(pm)
         {
         }
 
@@ -27,7 +27,7 @@ namespace Metricus.Plugin
 
     public abstract class OutputPlugin : Plugin
     {
-        public OutputPlugin(PluginManager pm) : base(pm)
+        protected OutputPlugin(PluginManager pm) : base(pm)
         {
         }
 
@@ -36,7 +36,7 @@ namespace Metricus.Plugin
 
     public abstract class FilterPlugin : Plugin
     {
-        public FilterPlugin(PluginManager pm) : base(pm)
+        protected FilterPlugin(PluginManager pm) : base(pm)
         {
         }
 
@@ -61,31 +61,21 @@ namespace Metricus.Plugin
 
         public void RegisterPlugin( Plugin plugin)
         {
-            Console.WriteLine ("Registering plugin of type: " + plugin.GetType().BaseType);
-            switch ((plugin.GetType ().BaseType.ToString())) 
+            var baseType = plugin.GetType().BaseType;
+            Console.WriteLine ("Registering plugin of type: " + baseType);
+            switch ((baseType?.ToString())) 
             {
             case "Metricus.Plugin.InputPlugin":
-                //Console.WriteLine ("Registering InputPlugin");
                 this.RegisterInputPlugin ((InputPlugin)plugin);
                 break;
             case "Metricus.Plugin.OutputPlugin":
-                //Console.WriteLine ("Registering OutputPlugin");
                 this.RegisterOutputPlugin ((OutputPlugin)plugin);
                 break;
             case "Metricus.Plugin.FilterPlugin":
-                //Console.WriteLine ("Registering FilterPlugin");
                 this.RegisterFilterPlugin ((FilterPlugin)plugin);
                 break;
             default:
                 throw new Exception ("Invalid plugin type.");
-            }
-        }
-
-        public void ListInputPlugins()
-        {
-            foreach (Plugin plugin in inputPlugins) 
-            {
-                //Console.WriteLine (plugin.GetType ());
             }
         }
 
@@ -113,13 +103,11 @@ namespace Metricus.Plugin
         public string type;
         public string instance;
         public int interval;
-        public string serverName;
         public string site;
 
         public metric(string theCategory, string theType, string theInstance, float theValue, DateTime theTime,
             int theInterval = 10)
         {
-            serverName = Environment.MachineName;
             site = null;
             category = theCategory;
             type = theType;
@@ -132,7 +120,7 @@ namespace Metricus.Plugin
         public override string ToString()
         {
             return
-                $"{{\"site\":\"{site}\",\"serverName\":\"{serverName}\",\"category\":\"{category}\",\"type\":\"{type}\",\"instance\":\"{instance}\",\"value\":{value},\"timestamp\":\"{timestamp.ToString("yyyy-MM-dd HH:mm:ss")}\",\"interval\":{interval}}}";
+                $"{{'site':'{site}','category':'{category}','type':'{type}','instance':'{instance}','value':{value},'timestamp':'{timestamp:yyyy-MM-dd HH:mm:ss}','interval':{interval}}}";
         }
     }
 

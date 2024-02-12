@@ -54,7 +54,7 @@ namespace Metricus.Plugins
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
             config = JsonSerializer.DeserializeFromString<GraphiteOutConfig>(File.ReadAllText(path + "/config.json"));
-            config.Servername = GetHostNameAsync().GetAwaiter().GetResult() ?? config.Servername;
+            config.Servername = config.Servername;
 
             Console.WriteLine("Loaded config : {0}", config.Dump());    
             this.pm = pm;

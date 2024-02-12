@@ -2,7 +2,7 @@
   "Hostname": "127.0.0.1",
   "Port": "2003",
   "Prefix": "advanced.env>",
-  "SendBufferSize": 500000,
+  "SendBufferSize": 2000,
   "Protocol": "tcp",
   "Servername": "localhost",
   "Debug": false

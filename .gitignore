@@ -188,3 +188,5 @@ Data/DevOps.Data/App.config
 #MonoDevelop
 *.pidb
 *.userprefs
+
+.idea/

@@ -1,0 +1,10 @@
+{
+  "Host": "unused_graphite_web_udp_hostname",
+  "Interval": "10000",
+  "ActivePlugins": [
+    "PerformanceCounter",
+    "#SitesFilter",
+    "GraphiteOut",
+    "ConsoleOut"
+  ]
+}

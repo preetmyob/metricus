@@ -1,16 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!--Project was exported from assembly: C:\temp\metricus-0.5.0\metricus-0.5.0\metricus.exe-->
+  <!--Project was exported from assembly: C:\temp\metricus-0.5.0\metricus-0.5.0\Plugins\GraphiteOut\GraphiteOut.dll-->
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{1E145DF3-3189-4C59-8B9A-EEB606A4ED5C}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <AssemblyName>metricus</AssemblyName>
+    <ProjectGuid>{004033BC-9F27-45E1-8CCA-7B51505F0EC8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AssemblyName>GraphiteOut</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <ApplicationVersion>1.0.8808.32162</ApplicationVersion>
+    <ApplicationVersion>1.0.8808.32163</ApplicationVersion>
     <FileAlignment>512</FileAlignment>
-    <RootNamespace>Metricus</RootNamespace>
+    <RootNamespace>Metricus.Plugins</RootNamespace>
     <LangVersion>latestmajor</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -18,7 +18,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>..\bin\debug</OutputPath>
+    <OutputPath>..\bin\Debug\plugins\GraphiteOut</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -27,20 +27,20 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\bin\Release\</OutputPath>
+    <OutputPath>..\bin\Release\plugins\GraphiteOut</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MetricusConfig.cs" />
-    <Compile Include="MetricusService.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="PluginLoader.cs" />
+    <Compile Include="GraphiteOut.cs" />
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="GraphiteOutConfig.cs" />
+    <Compile Include="MetricusGraphiteTcpClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PluginInterface\PluginInterface.csproj">
@@ -49,10 +49,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Graphite.NET" Version="1.1.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.3" />
     <PackageReference Include="ServiceStack.Text" Version="8.1.0" />
-    <PackageReference Include="Topshelf" Version="4.3.0" />
-    <PackageReference Include="Topshelf.NLog" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="config.json">

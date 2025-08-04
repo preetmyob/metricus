@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json;
 using Metricus.Plugin;
 
 namespace Metricus.Plugins
@@ -12,7 +12,7 @@ namespace Metricus.Plugins
 		public override void Work(List<metric> m)
 		{
             foreach(var theMetric in m)
-			    Console.WriteLine (JsonConvert.SerializeObject (theMetric, Formatting.Indented));
+			    Console.WriteLine (JsonSerializer.Serialize (theMetric, new JsonSerializerOptions { WriteIndented = true }));
 		}
 	}
 }

@@ -1,11 +1,11 @@
+using Microsoft.Web.Administration;
+using ServiceStack.Text;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Collections.Generic;
-using ServiceStack.Text;
-using Microsoft.Web.Administration;
 using System.Text.RegularExpressions;
-using System.Linq;
+using System.Timers;
 
 namespace Metricus.Plugin
 {
@@ -15,163 +15,201 @@ namespace Metricus.Plugin
     }
 
     public class SitesFilter : FilterPlugin, IFilterPlugin
-	{
-		private SitesFilterConfig config;
-		private Dictionary<int, string> siteIDtoName;
+    {
+        private SitesFilterConfig config;
+        private Dictionary<int, string> siteIDtoName;
         private ServerManager ServerManager;
-        private System.Timers.Timer LoadSitesTimer;
-        private Object RefreshLock = new Object();
+        private Timer LoadSitesTimer;
+        private object RefreshLock = new object();
 
-		private class SitesFilterConfig {
-			public Dictionary<string,ConfigCategory> Categories { get; set; }
-		}
+        public SitesFilter(PluginManager pm)
+            : base(pm)
+        {
+            string directoryName = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            Console.WriteLine("Loading config from {0}", (object) (directoryName + "/config.json"));
+            this.config = JsonSerializer.DeserializeFromString<SitesFilterConfig>(File.ReadAllText(directoryName + "/config.json"));
+            Console.WriteLine("Loaded config : {0}", (object) this.config.Dump<SitesFilterConfig>());
+            this.siteIDtoName = new Dictionary<int, string>();
+            this.LoadSites();
+            this.LoadSitesTimer = new Timer(300000.0);
+            this.LoadSitesTimer.Elapsed += (ElapsedEventHandler) ((o, e) => this.LoadSites());
+            this.LoadSitesTimer.Start();
+        }
 
-		private class ConfigCategory {
+        public override List<metric> Work(List<metric> m)
+        {
+            lock (this.RefreshLock)
+            {
+                Dictionary<string, ICategoryFilter> dictionary = new Dictionary<string, ICategoryFilter>()
+                {
+                    {
+                        "w3wp.process",
+                        (ICategoryFilter) new FilterWorkerPoolProcesses(this.ServerManager, "Process", "ID Process", this.config.Debug)
+                    },
+                    {
+                        "w3wp.net",
+                        (ICategoryFilter) new FilterWorkerPoolProcesses(this.ServerManager, ".NET CLR Memory", "Process ID", this.config.Debug)
+                    },
+                    {
+                        "lmw3svc",
+                        (ICategoryFilter) new FilterAspNetC(this.siteIDtoName, this.config.Debug)
+                    },
+                    {
+                        "w3svc",
+                        (ICategoryFilter) new FilterW3SvcW3Wp(this.config.Debug)
+                    }
+                };
+                foreach (KeyValuePair<string, ConfigCategory> category in this.config.Categories)
+                {
+                    foreach (string filter in category.Value.Filters)
+                    {
+                        if (dictionary.ContainsKey(filter))
+                            m = dictionary[filter].Filter(m, category.Key, category.Value.PreserveOriginal);
+                    }
+                }
+            }
+            return m;
+        }
+
+        public static string SiteNameReplacement(string siteName) => $"##{siteName}##";
+
+        public void LoadSites()
+        {
+            lock (this.RefreshLock)
+            {
+                try
+                {
+                    this.ServerManager?.Dispose();
+                    this.ServerManager = new ServerManager();
+                    this.siteIDtoName.Clear();
+                    foreach (Site site in (ConfigurationElementCollectionBase<Site>) this.ServerManager.Sites)
+                        this.siteIDtoName.Add((int) site.Id, site.Name);
+                    this.siteIDtoName.PrintDump<Dictionary<int, string>>();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Exception {ex} while loading IIS site information");
+                }
+            }
+        }
+
+        private class SitesFilterConfig
+        {
+            public Dictionary<string, ConfigCategory> Categories { get; set; }
+            public bool Debug { get; set; }
+        }
+
+        private class ConfigCategory
+        {
             public List<string> Filters { get; set; }
-			public bool PreserveOriginal { get; set; }
-		}
-
-		public SitesFilter(PluginManager pm) : base(pm)	{
-			var path = Path.GetDirectoryName (Assembly.GetExecutingAssembly().Location);
-			var configFile = path + "/config.json";
-			Console.WriteLine ("Loading config from {0}", configFile);
-			config = JsonSerializer.DeserializeFromString<SitesFilterConfig> (File.ReadAllText (path + "/config.json"));
-			Console.WriteLine ("Loaded config : {0}", config.Dump ());
-			siteIDtoName = new Dictionary<int, string> ();
-			this.LoadSites ();
-            LoadSitesTimer = new System.Timers.Timer(60000);
-            LoadSitesTimer.Elapsed += (o, e) => this.LoadSites();
-            LoadSitesTimer.Start();
-		}
-
-		public override List<metric> Work(List<metric> m)
-		{
-		    lock (RefreshLock)
-		    {
-		        var filterMap = new Dictionary<string, ICategoryFilter>
-		        {
-		            {"w3wp.process", new FilterWorkerPoolProcesses(ServerManager, "Process", "ID Process")},
-		            {"w3wp.net", new FilterWorkerPoolProcesses(ServerManager, ".NET CLR Memory", "Process ID")},
-		            {"lmw3svc", new FilterAspNetC(this.siteIDtoName)},
-		            {"w3svc", new FilterW3SvcW3Wp()}
-		        };
-
-		        foreach (var category in config.Categories)
-		            foreach (var filter in category.Value.Filters)
-		                if (filterMap.ContainsKey(filter))
-		                    m = filterMap[filter].Filter(m, category.Key, category.Value.PreserveOriginal);
-		    }
-
-			return m;
-		}
+            public bool PreserveOriginal { get; set; }
+        }
 
         public class FilterWorkerPoolProcesses : ICategoryFilter
         {
             public static Dictionary<string, int> WpNamesToIds = new Dictionary<string, int>();
-
             private ServerManager serverManager;
             private readonly string processIdCounter;
+            private readonly bool isDebug;
             private readonly string processIdCategory;
 
-            public FilterWorkerPoolProcesses(ServerManager serverManager, string processIdCategory, string processIdCounter)
+            public FilterWorkerPoolProcesses(
+                ServerManager serverManager,
+                string processIdCategory,
+                string processIdCounter,
+                bool isDebug = false)
             {
                 this.serverManager = serverManager;
                 this.processIdCounter = processIdCounter;
+                this.isDebug = isDebug;
                 this.processIdCategory = processIdCategory;
             }
 
             public List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal)
             {
-                // "Listen" to the process id counters to map instance names to process id's
-                metric m;
-                int wpId;
-                var originalMetricsCount = metrics.Count;
-                for (int x = 0; x < originalMetricsCount; x++)
+                int count = metrics.Count;
+                for (int index = 0; index < count; ++index)
                 {
-                    m = metrics[x];
-
-                    if (!processIdCategory.Equals(m.category, StringComparison.InvariantCultureIgnoreCase))
-                        continue;
-
-                    if (m.type.Equals(processIdCounter, StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        WpNamesToIds[m.instance] = (int) m.value;
-                        continue;
-                    }
+                    metric metric = metrics[index];
+                    if (this.processIdCategory.Equals(metric.category, StringComparison.InvariantCultureIgnoreCase) && metric.type.Equals(this.processIdCounter, StringComparison.InvariantCultureIgnoreCase))
+                        FilterWorkerPoolProcesses.WpNamesToIds[metric.instance] = (int) metric.value;
                 }
-                for (int x = 0; x < originalMetricsCount; x++)
-                { 
-                    m = metrics[x];
-
-                    if(!m.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase))
-                        continue;
-
-                    if (m.category.Equals(processIdCategory, StringComparison.InvariantCultureIgnoreCase) &&
-                        m.type.Equals(processIdCounter, StringComparison.InvariantCultureIgnoreCase))
-                        continue;   // Don't transform the "Process ID" values as all the other transformations rely on it
-
-                    if (m.instance.StartsWith("w3wp", StringComparison.Ordinal) && WpNamesToIds.TryGetValue(m.instance, out wpId))
+                for (int index1 = 0; index1 < count; ++index1)
+                {
+                    metric metric1 = metrics[index1];
+                    int num;
+                    if (metric1.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase) && (!metric1.category.Equals(this.processIdCategory, StringComparison.InvariantCultureIgnoreCase) || !metric1.type.Equals(this.processIdCounter, StringComparison.InvariantCultureIgnoreCase)) && metric1.instance.StartsWith("w3wp", StringComparison.Ordinal) && FilterWorkerPoolProcesses.WpNamesToIds.TryGetValue(metric1.instance, out num))
                     {
-                        for (int y = 0; y < serverManager.WorkerProcesses.Count; y++)
+                        for (int index2 = 0; index2 < this.serverManager.WorkerProcesses.Count; ++index2)
                         {
-                            if (serverManager.WorkerProcesses[y].ProcessId == wpId)                            
+                            if (this.serverManager.WorkerProcesses[index2].ProcessId == num)
                             {
-                                //Console.WriteLine($"{categoryName}: {m.instance} -> {serverManager.WorkerProcesses[y].AppPoolName}");
-                                m.instance = serverManager.WorkerProcesses[y].AppPoolName;
-                                switch(preserveOriginal)
+                                string appPoolName = this.serverManager.WorkerProcesses[index2].AppPoolName;
+                                metric metric2 = metric1 with
                                 {
-                                    case true:
-                                        metrics.Add(m);
-                                        break;
-                                    case false:
-                                        metrics[x] = m;
-                                        break;
+                                    site = appPoolName,
+                                    instance = (string) null
+                                };
+                                if (this.isDebug)
+                                {
+                                    Console.WriteLine($"old: {metric1}");
+                                    Console.WriteLine($"new: {metric2}");
                                 }
+                                if (preserveOriginal)
+                                    metrics.Add(metric1);
+                                else
+                                    metrics[index1] = metric2;
                             }
                         }
-                    }                    
+                    }
                 }
                 return metrics;
             }
         }
 
-	    public class FilterW3SvcW3Wp : ICategoryFilter
+        public class FilterW3SvcW3Wp : ICategoryFilter
         {
-	        private static Regex AppPoolRegex = new Regex(@"\d+_(?<AppPool>.*)");
+            private readonly bool _isDebug;
+            private static Regex AppPoolRegex = new Regex("\\d+_(?<AppPool>.*)");
+
+            public FilterW3SvcW3Wp(bool isDebug = false) => this._isDebug = isDebug;
 
             public List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal)
             {
-                var returnMetrics = new List<metric>();
-
-                foreach (var metric in metrics)
+                List<metric> metricList = new List<metric>();
+                foreach (metric metric1 in metrics)
                 {
-                    var newMetric = metric;
-
-                    if (!metric.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase))
+                    if (!metric1.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        returnMetrics.Add(metric);
-                        continue;
-                    }
-
-                    var match = AppPoolRegex.Match(metric.instance);
-                    if (!match.Success)
-                    {
-                        returnMetrics.Add(metric);
+                        metricList.Add(metric1);
                     }
                     else
                     {
-                        var appPool = match.Groups["AppPool"].Value;
-
-                        newMetric.instance = appPool;
-                        //Console.WriteLine($"{categoryName}: {metric.instance} -> {newMetric.instance}");
-                        returnMetrics.Add(newMetric);
-
-                        if (preserveOriginal)
-                            returnMetrics.Add(metric);
+                        Match match = FilterW3SvcW3Wp.AppPoolRegex.Match(metric1.instance);
+                        if (!match.Success)
+                        {
+                            metricList.Add(metric1);
+                        }
+                        else
+                        {
+                            string str = match.Groups["AppPool"].Value;
+                            metric metric2 = metric1 with
+                            {
+                                site = str,
+                                instance = str
+                            };
+                            if (this._isDebug)
+                            {
+                                Console.WriteLine($"old: {metric1}");
+                                Console.WriteLine($"new: {metric2}");
+                            }
+                            metricList.Add(metric2);
+                            if (preserveOriginal)
+                                metricList.Add(metric1);
+                        }
                     }
                 }
-
-                return returnMetrics;
+                return metricList;
             }
         }
 
@@ -180,68 +218,45 @@ namespace Metricus.Plugin
             private static string PathSansId = "_LM_W3SVC";
             private static Regex MatchPathWithId = new Regex("_LM_W3SVC_(\\d+)_");
             private static Regex MatchRoot = new Regex("ROOT_?");
-
             private readonly Dictionary<int, string> siteIdsToNames;
+            private readonly bool _isDebug;
 
-            public FilterAspNetC(Dictionary<int, string> siteIdsToNames)
+            public FilterAspNetC(Dictionary<int, string> siteIdsToNames, bool isDebug = false)
             {
                 this.siteIdsToNames = siteIdsToNames;
+                this._isDebug = isDebug;
             }
 
             public List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal)
             {
-                var returnMetrics = new List<metric>();
-                foreach (var metric in metrics)
+                List<metric> metricList = new List<metric>();
+                foreach (metric metric1 in metrics)
                 {
-                    var newMetric = metric;
-
-                    if (!metric.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase))
+                    metric metric2 = metric1;
+                    if (!metric1.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase))
+                        metricList.Add(metric2);
+                    else if (metric1.instance.Contains(FilterAspNetC.PathSansId))
                     {
-                        returnMetrics.Add(newMetric);
-                        continue;
-                    }
-
-                    if (metric.instance.Contains(PathSansId))
-                    {
-                        var match = MatchPathWithId.Match(metric.instance);
-                        var id = match.Groups[1].Value;
-                        string siteName;
-                        if (siteIdsToNames.TryGetValue(int.Parse(id), out siteName))
+                        string str;
+                        if (this.siteIdsToNames.TryGetValue(int.Parse(FilterAspNetC.MatchPathWithId.Match(metric1.instance).Groups[1].Value), out str))
                         {
-                            newMetric.instance = Regex.Replace(metric.instance, "_LM_W3SVC_(\\d+)_ROOT_?", siteName);
-                            //Console.WriteLine($"{categoryName}: {metric.instance} -> {newMetric.instance}");
-                            returnMetrics.Add(newMetric);
+                            metric2.site = str;
+                            metric2.instance = str;
+                            if (this._isDebug)
+                            {
+                                Console.WriteLine($"old: {metric1}");
+                                Console.WriteLine($"new: {metric2}");
+                            }
+                            metricList.Add(metric2);
                         }
                         if (preserveOriginal)
-                            returnMetrics.Add(metric);
+                            metricList.Add(metric1);
                     }
                     else
-                        returnMetrics.Add(newMetric);                    
+                        metricList.Add(metric2);
                 }
-                return returnMetrics;
+                return metricList;
             }
         }
-		
-		public void LoadSites() {
-		    lock (RefreshLock)
-		    {
-		        try
-		        {
-		            ServerManager?.Dispose();
-		            ServerManager = new Microsoft.Web.Administration.ServerManager();
-		            siteIDtoName.Clear();
-		            foreach (var site in ServerManager.Sites)
-		            {
-		                this.siteIDtoName.Add((int) site.Id, site.Name);
-		            }
-
-		            this.siteIDtoName.PrintDump();
-		        }
-		        catch (Exception)
-                {
-                    Console.WriteLine("Exception caught while loading IIS site information");
-                }
-		    }
-        } 
-	}
+    }
 }

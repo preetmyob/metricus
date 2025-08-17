@@ -7,8 +7,10 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{2BD4850D-9B86-4C78-9026-7EA8F70CA8FB}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>PluginInterface</RootNamespace>
+    <RootNamespace>Metricus.Plugin</RootNamespace>
     <AssemblyName>PluginInterface</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <LangVersion>latest</LangVersion>
     <ReleaseVersion>0.2.3</ReleaseVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -33,8 +35,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Metricus.cs" />
     <Compile Include="Plugin.cs" />
+    <Compile Include="InputPlugin.cs" />
+    <Compile Include="OutputPlugin.cs" />
+    <Compile Include="FilterPlugin.cs" />
+    <Compile Include="PluginManager.cs" />
+    <Compile Include="metric.cs" />
+    <Compile Include="IInputPlugin.cs" />
+    <Compile Include="IOutputPlugin.cs" />
+    <Compile Include="IFilterPlugin.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

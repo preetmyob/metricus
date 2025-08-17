@@ -365,6 +365,9 @@ FodyWeavers.xsd
 # NuGet packages folder (already being tracked, but should be ignored)
 packages/
 
+# Build releases folder
+releases/
+
 # IDE specific files
 .idea/
 *.suo

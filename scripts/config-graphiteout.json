@@ -1,9 +1,9 @@
 {
-  "Hostname": "graphite.edops.myob.com",
+  "Hostname": "127.0.0.1",
   "Port": "2003",
-  "Prefix": "advanced.development",
+  "Prefix": "advanced.env>",
   "SendBufferSize": 2000,
   "Protocol": "tcp",
-  "Servername": "preet.i-9999999",
+  "Servername": "localhost",
   "Debug": false
 }

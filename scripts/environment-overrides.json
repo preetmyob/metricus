@@ -11,7 +11,9 @@
     "GraphiteOutConfig": {
       "Debug": true,
       "Hostname": "graphite.edops.myob.com",
-      "Port" : "2010"
+      "Port": "2010",
+      "Prefix": "advanced.development",
+      "Servername": "preet.i-9999999"
     },
     "SitesFilterConfig": {
       "Debug": true
@@ -26,13 +28,12 @@
         "GraphiteOut",
         "ConsoleOut"
       ]
-      
     },
     "GraphiteOutConfig": {
       "Debug": true,
       "Hostname": "10.0.0.14",
-      "Prefix": "advanced.development",
-      "Port": "2003"
+      "Prefix": "advanced.production",
+      "Servername": "preet.i-9999999"
     },
     "SitesFilterConfig": {
       "Debug": true
@@ -41,7 +42,6 @@
   "MinTest": {
     "MainConfig": {
       "Host": "minimal_test_host",
-      "Interval": "10000",
       "ActivePlugins": [
         "PerformanceCounter",
         "GraphiteOut",
@@ -49,13 +49,10 @@
       ]
     },
     "GraphiteOutConfig": {
-      "SendBufferSize": 2000,
-      "Protocol": "tcp",
+      "Hostname": "10.0.0.14",
       "Servername": "minimal",
       "Debug": true,
-      "Hostname": "10.0.0.14",
-      "Prefix": "minimal.test",
-      "Port": "2003"
+      "Prefix": "minimal.test"
     },
     "PerformanceCounterConfig": {
       "categories": [
@@ -81,73 +78,6 @@
           ]
         }
       ]
-    }
-  },
-  "Prod": {
-    "MainConfig": {
-      "Host": "unused_graphite_web_udp_hostname",
-      "Interval": "10000",
-      "ActivePlugins": [
-        "PerformanceCounter",
-        "SitesFilter",
-        "GraphiteOut"
-      ]
-    },
-    "GraphiteOutConfig": {
-      "SendBufferSize": 2000,
-      "Protocol": "tcp",
-      "Servername": "preet.i-9999999",
-      "Debug": false,
-      "Hostname": "10.0.0.14",
-      "Prefix": "advanced.production",
-      "Port": "2003"
-    },
-    "SitesFilterConfig": {
-      "Debug": false,
-      "Categories": {
-        "ASP.NET Applications": {
-          "PreserveOriginal": false,
-          "Filters": [
-            "lmw3svc"
-          ]
-        },
-        "Process": {
-          "PreserveOriginal": false,
-          "Filters": [
-            "w3wp.process"
-          ]
-        },
-        "ASP.NET": {
-          "Filters": [
-            "lmw3svc"
-          ],
-          "PreserveOriginal": false
-        },
-        ".NET CLR Exceptions": {
-          "Filters": [
-            "w3wp.net"
-          ],
-          "PreserveOriginal": false
-        },
-        ".NET CLR LocksAndThreads": {
-          "Filters": [
-            "w3wp.net"
-          ],
-          "PreserveOriginal": false
-        },
-        ".NET CLR Memory": {
-          "Filters": [
-            "w3wp.net"
-          ],
-          "PreserveOriginal": false
-        },
-        "W3SVC_W3WP": {
-          "Filters": [
-            "w3svc"
-          ],
-          "PreserveOriginal": false
-        }
-      }
     }
   }
 }

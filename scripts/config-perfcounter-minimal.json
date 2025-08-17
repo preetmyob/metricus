@@ -1,0 +1,25 @@
+{
+  "categories": [
+    {
+      "name": "Processor",
+      "counters": [
+        "% Processor Time"
+      ],
+      "instances": [
+        "_total"
+      ]
+    },
+    {
+      "name": "Memory",
+      "counters": [
+        "Available MBytes"
+      ]
+    },
+    {
+      "name": "System",
+      "counters": [
+        "processes"
+      ]
+    }
+  ]
+}

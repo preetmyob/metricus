@@ -554,18 +554,63 @@ try {
         }
     }
 
-    # Create zip package
+    # Copy test load scripts
+    Write-Host "Setting up test load scripts..." -ForegroundColor Green
+    $TestLoadDir = Join-Path $ReleaseDir "testload"
+    New-Item -ItemType Directory -Path $TestLoadDir -Force | Out-Null
+    
+    $TestLoadFiles = @(
+        "Run-MetricusLoadTest.ps1",
+        "Cleanup-LoadTest.ps1", 
+        "LOADTEST-README.md",
+        "POWERSHELL-COMPATIBILITY.md",
+        "run-load-test.bat",
+        "cleanup-load-test.bat"
+    )
+    
+    foreach ($TestFile in $TestLoadFiles) {
+        $SourcePath = Join-Path $ScriptDir $TestFile
+        if (Test-Path $SourcePath) {
+            Copy-Item $SourcePath $TestLoadDir
+            Write-Host "  ✓ testload\$TestFile" -ForegroundColor Gray
+        } else {
+            Write-Warning "Test load file not found: $TestFile"
+        }
+    }
+
+    # Create zip package with proper folder structure
     Write-Host "Creating zip package..." -ForegroundColor Green
     if (Test-Path $ZipPath) {
         Remove-Item $ZipPath -Force
     }
 
+    # Create a temporary directory for the zip structure
+    $TempZipDir = Join-Path $OutputPath "temp-zip-$(Get-Random)"
+    $ZipContentDir = Join-Path $TempZipDir "metricus-$Version"
+    
     try {
+        # Create the temp directory structure
+        New-Item -ItemType Directory -Path $ZipContentDir -Force | Out-Null
+        
+        # Copy all files from ReleaseDir to the versioned subdirectory
+        Copy-Item -Path "$ReleaseDir\*" -Destination $ZipContentDir -Recurse -Force
+        
+        # Create the zip from the temp directory (this will include the metricus-version folder)
         Add-Type -AssemblyName System.IO.Compression.FileSystem
-        [System.IO.Compression.ZipFile]::CreateFromDirectory($ReleaseDir, $ZipPath)
+        [System.IO.Compression.ZipFile]::CreateFromDirectory($TempZipDir, $ZipPath)
+        
+        Write-Host "  ✓ Zip created with proper folder structure: metricus-$Version/" -ForegroundColor Gray
     }
     catch {
-        Compress-Archive -Path "$ReleaseDir\*" -DestinationPath $ZipPath -Force
+        # Fallback to PowerShell Compress-Archive with proper structure
+        Write-Host "  Using PowerShell Compress-Archive fallback..." -ForegroundColor Yellow
+        Compress-Archive -Path $ZipContentDir -DestinationPath $ZipPath -Force
+    }
+    finally {
+        # Clean up temp directory
+        if (Test-Path $TempZipDir) {
+            Remove-Item $TempZipDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 
     # Summary

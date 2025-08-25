@@ -1,16 +1,22 @@
+# Metricus Testing Environment - Docker Compose
+# 
+# This configuration uses host networking to enable VM connectivity
+# VM Access: Use Mac IP 10.0.0.14 from Windows VM
+# 
+# Services accessible from VM:
+# - Grafana: http://10.0.0.14:3001 (admin/admin)
+# - Graphite Web: http://10.0.0.14:8080
+# - Carbon Receiver: 10.0.0.14:2003
+#
+# Last updated: 2025-08-18 - VM connectivity fixes applied
+
 services:
   graphite:
     image: graphiteapp/graphite-statsd:latest
     container_name: metricus-graphite
-    ports:
-      - "8080:80"      # Graphite web interface
-      - "2003:2003"    # Carbon receiver (plaintext)
-      - "2004:2004"    # Carbon receiver (pickle)
-      - "2010:2003"    # Carbon receiver (custom port for Metricus)
-      - "2023:2023"    # Carbon aggregator (plaintext)
-      - "2024:2024"    # Carbon aggregator (pickle)
-      - "8125:8125/udp" # StatsD
-      - "8126:8126"    # StatsD admin
+    # Host networking allows VM to connect directly to services
+    # Bypasses Docker bridge network and macOS firewall issues
+    network_mode: host
     environment:
       - GRAPHITE_TIME_ZONE=UTC
     volumes:
@@ -22,6 +28,42 @@ services:
       timeout: 10s
       retries: 3
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: metricus-grafana
+    # Host networking enables VM access to Grafana
+    network_mode: host
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      # Prevent plugin installation issues that cause startup failures
+      - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=""
+    volumes:
+      - grafana-data:/var/lib/grafana
+      # Custom config file (though Grafana still uses port 3001)
+      - ./grafana.ini:/etc/grafana/grafana.ini
+      # Provisioning for automatic datasource and dashboard setup
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - graphite
+    restart: unless-stopped
+    # Note: Despite config, Grafana runs on port 3001 and is accessible from VM
+
 volumes:
   graphite-data:
     driver: local
+  grafana-data:
+    driver: local
+
+# VM Configuration for Metricus:
+# {
+#   "GraphiteHost": "10.0.0.14",
+#   "GraphitePort": 2003
+# }
+#
+# Troubleshooting:
+# - Check VM IP: Get-NetIPAddress (PowerShell)
+# - Test connectivity: Test-NetConnection -ComputerName 10.0.0.14 -Port 2003
+# - Check port conflicts: lsof -i :PORT (Mac)
+# - View logs: docker logs metricus-graphite

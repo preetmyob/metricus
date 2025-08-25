@@ -79,5 +79,25 @@
         }
       ]
     }
+  },
+  "Prod": {
+    "MainConfig": {
+      "ActivePlugins": [
+        "PerformanceCounter",
+        "SitesFilter",
+        "GraphiteOut",
+        "ConsoleOut"
+      ]
+    },
+    "GraphiteOutConfig": {
+      "Debug": true,
+      "Hostname": "10.72.36.144",
+      "Port": 2003,
+      "Prefix": "advanced.production",
+      "Servername": "preet.i-9999999"
+    },
+    "SitesFilterConfig": {
+      "Debug": true
+    }
   }
 }

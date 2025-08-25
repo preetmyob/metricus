@@ -1,29 +1,22 @@
+using Graphite;
+using Metricus.Plugin;
+using ServiceStack.Text;
 using System;
-using System.Text.RegularExpressions;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
-using Metricus.Plugin;
-using ServiceStack.Text;
-using Graphite;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Metricus.Plugins
 {
     public class GraphiteOut : OutputPlugin, IOutputPlugin
     {
-        class GraphiteOutConfig
-        {
-            public String Hostname { get; set; }
-            public String Prefix { get; set; }
-            public int Port { get; set; }
-            public string Protocol { get; set; }
-            public int SendBufferSize { get; set; }
-        }
-
         private PluginManager pm;
         private GraphiteOutConfig config;
         private MetricusGraphiteTcpClient tcpClient;
@@ -37,134 +30,177 @@ namespace Metricus.Plugins
         public GraphiteOut(PluginManager pm)
             : base(pm)
         {
-            var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            config = JsonSerializer.DeserializeFromString<GraphiteOutConfig>(File.ReadAllText(path + "/config.json"));
-            Console.WriteLine("Loaded config : {0}", config.Dump());
+            this.config = JsonSerializer.DeserializeFromString<GraphiteOutConfig>(File.ReadAllText(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + "/config.json"));
+            this.config.Servername = this.config.Servername;
+            Console.WriteLine("Loaded config : {0}", (object) this.config.Dump<GraphiteOutConfig>());
             this.pm = pm;
-            if (config.SendBufferSize == 0) config.SendBufferSize = DefaultSendBufferSize;
-            MetricSpool = new BlockingCollection<metric>(config.SendBufferSize);
-            WorkMetricTask = Task.Factory.StartNew(() => WorkMetrics(), TaskCreationOptions.LongRunning);
+            if (this.config.SendBufferSize == 0)
+                this.config.SendBufferSize = this.DefaultSendBufferSize;
+            this.MetricSpool = new BlockingCollection<metric>(this.config.SendBufferSize);
+            this.WorkMetricTask = Task.Factory.StartNew((Action) (() => this.WorkMetrics()), TaskCreationOptions.LongRunning);
+        }
+
+        private async Task<string> GetHostNameAsync()
+        {
+            string str = "http://169.254.169.254/latest/meta-data/";
+            try
+            {
+                Console.WriteLine("Attempting to get hostname from AWS EC2 Metadata endpoint " + str);
+                using (HttpClient httpClient = new HttpClient())
+                {
+                    Task<string> instanceIdTask = httpClient.GetStringAsync(str + "instance-id");
+                    Task<string> localHostnameTask = httpClient.GetStringAsync(str + "local-hostname");
+                    string[] strArray = await Task.WhenAll<string>(instanceIdTask, localHostnameTask);
+                    return $"{instanceIdTask.Result}-{localHostnameTask.Result}";
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Warning: {ex.Message}. This is probably because you're running it on a non EC2. Default to MachineName in environment");
+                return Environment.MachineName;
+            }
         }
 
         public override void Work(List<metric> m)
         {
-            foreach (var rawMetric in m) { MetricSpool.TryAdd(rawMetric); }
+            foreach (metric metric in m)
+                this.MetricSpool.TryAdd(metric);
         }
 
         private void WorkMetrics()
         {
-            Action<metric> shipMethod;
-            switch(config.Protocol.ToLower())
+            Action<metric> action;
+            switch (this.config.Protocol.ToLower())
             {
                 case "tcp":
-                    shipMethod = (m) => ShipMetricTCP(m); break;
+                    action = (Action<metric>) (m => this.ShipMetricTCP(m));
+                    break;
                 case "udp":
-                    shipMethod = (m) => ShipMetricUDP(m); break;
+                    action = (Action<metric>) (m => this.ShipMetricUDP(m));
+                    break;
                 default:
-                    shipMethod = (m) => ShipMetricUDP(m); break;
+                    action = (Action<metric>) (m => this.ShipMetricUDP(m));
+                    break;
             }
-
-            Boolean done = false;
-            while (!done)
+            bool flag = false;
+            while (!flag)
             {
-                foreach (var rawMetric in MetricSpool.GetConsumingEnumerable())
-                {
-                    shipMethod(rawMetric);
-                }
+                foreach (metric consuming in this.MetricSpool.GetConsumingEnumerable())
+                    action(consuming);
             }
         }
 
         private void ShipMetricUDP(metric m)
         {
-            udpClient = udpClient ?? new GraphiteUdpClient(config.Hostname, config.Port, config.Prefix + "." + pm.Hostname);
-            var theMetric = FormatMetric(m);
-            var path = MetricPath(theMetric);
-            udpClient.Send(path, (int)m.value);
+            this.udpClient = this.udpClient ?? new GraphiteUdpClient(this.config.Hostname, this.config.Port, $"{this.config.Prefix}.{this.pm.Hostname}");
+            this.udpClient.Send(this.MetricPath(this.FormatMetric(m)), (int) m.value);
         }
 
         private void ShipMetricTCP(metric m)
         {
-            bool sent = false;
-            while (!sent)
+            bool flag = false;
+            while (!flag)
             {
                 try
                 {
-                    tcpClient = tcpClient ?? new MetricusGraphiteTcpClient(config.Hostname, config.Port, config.Prefix + "." + pm.Hostname);
-                    var theMetric = FormatMetric(m);
-                    var path = MetricPath(theMetric);
-                    tcpClient.Send(path, m.value);
-                    sent = true;
+                    this.tcpClient = this.tcpClient ?? new MetricusGraphiteTcpClient(this.config.Hostname, this.config.Port, this.config.Debug);
+                    this.tcpClient.Send(this.MetricPath(this.FormatMetric(m)), m.value);
+                    flag = true;
                 }
-                catch (Exception e) //There has been some sort of error with the client
+                catch (Exception ex)
                 {
-                    Console.WriteLine(e);
-                    if (tcpClient != null) tcpClient.Dispose();
-                    tcpClient = null;
-                    System.Threading.Thread.Sleep(5000);
+                    Console.WriteLine((object) ex);
+                    if (this.tcpClient != null)
+                        this.tcpClient.Dispose();
+                    this.tcpClient = (MetricusGraphiteTcpClient) null;
+                    Thread.Sleep(5000);
                 }
             }
         }
 
         private string MetricPath(metric m)
         {
-            var path = m.category;
-            path += (m.instance != "") ? "." + m.instance : ".total";
-            path += "." + m.type;
-            return path.ToLower();
+            StringBuilder builder = new StringBuilder();
+            this.AppendIf(builder, this.config.Prefix);
+            builder.Append(!string.IsNullOrEmpty(m.site) ? "site." : "server.");
+            this.AppendIf(builder, m.site);
+            this.AppendIf(builder, this.config.Servername);
+            this.AppendIf(builder, m.category);
+            this.AppendIf(builder, m.instance);
+            if (!string.IsNullOrEmpty(m.type))
+                builder.Append(m.type);
+            return builder.ToString().ToLower();
+        }
+
+        private void AppendIf(StringBuilder builder, string val)
+        {
+            if (string.IsNullOrEmpty(val))
+                return;
+            builder.Append(val);
+            builder.Append(".");
         }
 
         private metric FormatMetric(metric m)
         {
             m.category = Regex.Replace(m.category, FormatReplacementMatch, FormatReplacementString);
             m.type = Regex.Replace(m.type, FormatReplacementMatch, FormatReplacementString);
-            m.instance = Regex.Replace(m.instance, FormatReplacementMatch, FormatReplacementString);
+            m.instance = !string.IsNullOrEmpty(m.instance) ? (m.instance.Equals(m.site, StringComparison.OrdinalIgnoreCase) ? (string) null : Regex.Replace(m.instance, FormatReplacementMatch, FormatReplacementString)) : "_total";
+            if (!string.IsNullOrEmpty(m.site))
+                m.site = Regex.Replace(m.site, FormatReplacementMatch, FormatReplacementString);
             return m;
+        }
+
+        private class GraphiteOutConfig
+        {
+            public string Hostname { get; set; }
+            public string Prefix { get; set; }
+            public int Port { get; set; }
+            public string Protocol { get; set; }
+            public int SendBufferSize { get; set; }
+            public string Servername { get; set; }
+            public bool Debug { get; set; }
         }
 
         public class MetricusGraphiteTcpClient : IDisposable
         {
-            public string Hostname { get; private set; }
-            public int Port { get; private set; }
-            public string KeyPrefix { get; private set; }
+            private readonly bool _isDebug;
 
-            private readonly TcpClient _tcpClient;
+            public string GraphiteHostname { get; }
+            public TcpClient Client { get; }
+            public int Port { get; }
 
-            public MetricusGraphiteTcpClient(string hostname, int port = 2003, string keyPrefix = null)
+            public MetricusGraphiteTcpClient(string graphiteHostname, int port, bool isDebug = false)
             {
-                Hostname = hostname;
-                Port = port;
-                KeyPrefix = keyPrefix;
-                _tcpClient = new TcpClient(Hostname, Port);
+                this._isDebug = isDebug;
+                this.GraphiteHostname = graphiteHostname;
+                this.Port = port;
+                this.Port = port;
+                this.Client = new TcpClient(this.GraphiteHostname, this.Port);
             }
 
-            public void Send(string path, float value)
-            {
-                Send(path, value, DateTime.UtcNow);
-            }
+            public void Send(string path, float value) => this.Send(path, value, DateTime.UtcNow);
 
             public void Send(string path, float value, DateTime timeStamp)
             {
-                    if (!string.IsNullOrWhiteSpace(KeyPrefix))
-                        path = KeyPrefix + "." + path;
-                    var message = Encoding.UTF8.GetBytes(string.Format("{0} {1} {2}\n", path, value, ServiceStack.Text.DateTimeExtensions.ToUnixTime(timeStamp.ToUniversalTime())));
-                    _tcpClient.GetStream().Write(message, 0, message.Length);
+                string s = $"{path} {value} {ServiceStack.Text.DateTimeExtensions.ToUnixTime(timeStamp.ToUniversalTime())}\n";
+                if (this._isDebug)
+                    Console.WriteLine("Sending msg: " + s);
+                byte[] bytes = Encoding.UTF8.GetBytes(s);
+                this.Client.GetStream().Write(bytes, 0, bytes.Length);
             }
 
             public void Dispose()
             {
-                Dispose(true);
-                GC.SuppressFinalize(this);
+                this.Dispose(true);
+                GC.SuppressFinalize((object) this);
             }
 
             protected virtual void Dispose(bool disposing)
             {
-                if (!disposing) return;
-                if (_tcpClient != null)
-                    _tcpClient.Close();
+                if (!disposing || this.Client == null)
+                    return;
+                this.Client.Close();
             }
-
         }
-
     }
 }
-

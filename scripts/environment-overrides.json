@@ -1,0 +1,103 @@
+{
+  "Development": {
+    "MainConfig": {
+      "ActivePlugins": [
+        "PerformanceCounter",
+        "SitesFilter",
+        "GraphiteOut",
+        "ConsoleOut"
+      ]
+    },
+    "GraphiteOutConfig": {
+      "Debug": true,
+      "Hostname": "graphite.edops.myob.com",
+      "Port": "2010",
+      "Prefix": "advanced.development",
+      "Servername": "preet.i-9999999"
+    },
+    "SitesFilterConfig": {
+      "Debug": true
+    }
+  },
+  "Test": {
+    "MainConfig": {
+      "Interval": "5000",
+      "ActivePlugins": [
+        "PerformanceCounter",
+        "SitesFilter",
+        "GraphiteOut",
+        "ConsoleOut"
+      ]
+    },
+    "GraphiteOutConfig": {
+      "Debug": true,
+      "Hostname": "10.0.0.14",
+      "Prefix": "advanced.production",
+      "Servername": "preet.i-9999999"
+    },
+    "SitesFilterConfig": {
+      "Debug": true
+    }
+  },
+  "MinTest": {
+    "MainConfig": {
+      "Host": "minimal_test_host",
+      "ActivePlugins": [
+        "PerformanceCounter",
+        "GraphiteOut",
+        "ConsoleOut"
+      ]
+    },
+    "GraphiteOutConfig": {
+      "Hostname": "10.0.0.14",
+      "Servername": "minimal",
+      "Debug": true,
+      "Prefix": "minimal.test"
+    },
+    "PerformanceCounterConfig": {
+      "categories": [
+        {
+          "name": "Processor",
+          "counters": [
+            "% Processor Time"
+          ],
+          "instances": [
+            "_total"
+          ]
+        },
+        {
+          "name": "Memory",
+          "counters": [
+            "Available MBytes"
+          ]
+        },
+        {
+          "name": "System",
+          "counters": [
+            "processes"
+          ]
+        }
+      ]
+    }
+  },
+  "Prod": {
+    "MainConfig": {
+      "ActivePlugins": [
+        "PerformanceCounter",
+        "SitesFilter",
+        "GraphiteOut",
+        "ConsoleOut"
+      ]
+    },
+    "GraphiteOutConfig": {
+      "Debug": true,
+      "Hostname": "10.72.36.144",
+      "Port": 2003,
+      "Prefix": "advanced.production",
+      "Servername": "preet.i-9999999"
+    },
+    "SitesFilterConfig": {
+      "Debug": true
+    }
+  }
+}

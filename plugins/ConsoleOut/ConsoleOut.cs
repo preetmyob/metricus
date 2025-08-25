@@ -1,18 +1,20 @@
+using Metricus.Plugin;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using Metricus.Plugin;
 
 namespace Metricus.Plugins
 {
-	public class ConsoleOut : OutputPlugin, IOutputPlugin
-	{
-		public ConsoleOut(PluginManager pm) : base(pm) {}
+  public class ConsoleOut : OutputPlugin, IOutputPlugin
+  {
+    public ConsoleOut(PluginManager pm) : base(pm)
+    {
+    }
 
-		public override void Work(List<metric> m)
-		{
-            foreach(var theMetric in m)
-			    Console.WriteLine (JsonConvert.SerializeObject (theMetric, Formatting.Indented));
-		}
-	}
+    public override void Work(List<metric> m)
+    {
+      foreach (metric metric in m)
+        Console.WriteLine(JsonConvert.SerializeObject((object) metric, Formatting.Indented));
+    }
+  }
 }

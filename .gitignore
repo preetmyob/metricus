@@ -367,7 +367,6 @@ packages/
 
 # Build releases folder
 releases/
-
 # IDE specific files
 .idea/
 *.suo

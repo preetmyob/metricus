@@ -1,3 +1,4 @@
+
 using System.Collections.Generic;
 
 namespace Metricus.Plugin
@@ -11,3 +12,4 @@ namespace Metricus.Plugin
     public abstract List<metric> Work(List<metric> m);
   }
 }
+

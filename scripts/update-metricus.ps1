@@ -289,6 +289,17 @@ try {
     }
     
     Write-Log "Zip validation successful: $($metricusFolder.Name)"
+    
+    # Check if we're trying to update to the same version
+    $newVersionName = $metricusFolder.Name
+    if ($currentVersionName -eq $newVersionName) {
+        Write-Log "=== UPDATE SKIPPED ==="
+        Write-Log "Current version ($currentVersionName) is already the target version"
+        Write-Log "No update required - exiting successfully"
+        Remove-Item $tempExtractPath -Recurse -Force
+        exit 0
+    }
+    
     Remove-Item $tempExtractPath -Recurse -Force
     
     # Extract to final location

@@ -7,6 +7,16 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Import AWS PowerShell module if needed for S3 operations
+if ($ZipPath -match '^s3://.*') {
+    try {
+        Import-Module AWSPowerShell -ErrorAction Stop
+        Write-Host "AWS PowerShell module loaded successfully"
+    } catch {
+        throw "AWS PowerShell module not available. Please install: Install-Module AWSPowerShell"
+    }
+}
+
 function Write-Log($Message, $Level = "INFO") {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     Write-Host "[$timestamp] [$Level] $Message"
@@ -28,12 +38,11 @@ function Get-ZipFile($ZipPath) {
                 # s3://bucket/key format
                 $bucket = $matches[1]
                 $key = $matches[2]
-                Write-Log "Using AWS CLI to download from S3: s3://$bucket/$key"
+                Write-Log "Using AWS PowerShell to download from S3: s3://$bucket/$key"
                 
-                $awsProcess = Start-Process -FilePath "aws" -ArgumentList @("s3", "cp", "s3://$bucket/$key", $tempZipPath) -Wait -PassThru -NoNewWindow
-                if ($awsProcess.ExitCode -ne 0) {
-                    throw "AWS CLI download failed with exit code: $($awsProcess.ExitCode)"
-                }
+                Copy-S3Object -BucketName $bucket -Key $key -LocalFile $tempZipPath
+                Write-Log "S3 download completed successfully"
+                
             } else {
                 # HTTPS S3 URL format
                 Write-Log "Downloading from HTTPS S3 URL"

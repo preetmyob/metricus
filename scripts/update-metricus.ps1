@@ -9,11 +9,51 @@ $ErrorActionPreference = "Stop"
 
 function Write-Log($Message, $Level = "INFO") {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Write-Output "[$timestamp] [$Level] $Message"
+    Write-Host "[$timestamp] [$Level] $Message"
 }
 
 function Test-AdminRights {
     return ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+}
+
+function Get-ZipFile($ZipPath) {
+    if ($ZipPath -match '^https?://.*\.s3.*\.amazonaws\.com/.*' -or $ZipPath -match '^s3://.*') {
+        # S3 URL detected - download to temp location
+        $originalFileName = Split-Path $ZipPath -Leaf
+        $tempZipPath = Join-Path $env:TEMP $originalFileName
+        Write-Log "S3 URL detected, downloading to: $tempZipPath"
+        
+        try {
+            if ($ZipPath -match '^s3://(.+?)/(.+)') {
+                # s3://bucket/key format
+                $bucket = $matches[1]
+                $key = $matches[2]
+                Write-Log "Using AWS CLI to download from S3: s3://$bucket/$key"
+                
+                $awsProcess = Start-Process -FilePath "aws" -ArgumentList @("s3", "cp", "s3://$bucket/$key", $tempZipPath) -Wait -PassThru -NoNewWindow
+                if ($awsProcess.ExitCode -ne 0) {
+                    throw "AWS CLI download failed with exit code: $($awsProcess.ExitCode)"
+                }
+            } else {
+                # HTTPS S3 URL format
+                Write-Log "Downloading from HTTPS S3 URL"
+                Invoke-WebRequest -Uri $ZipPath -OutFile $tempZipPath -UseBasicParsing
+            }
+            
+            Write-Log "Download completed successfully"
+            return $tempZipPath
+            
+        } catch {
+            throw "Failed to download from S3: $($_.Exception.Message)"
+        }
+    } else {
+        # Local file path
+        if (-not (Test-Path $ZipPath)) {
+            throw "Local zip file not found: $ZipPath"
+        }
+        Write-Log "Using local zip file: $ZipPath"
+        return $ZipPath
+    }
 }
 
 function Invoke-Rollback($backupZipPath) {
@@ -21,7 +61,7 @@ function Invoke-Rollback($backupZipPath) {
     
     try {
         # Stop current service if running
-        $service = Get-Service | Where-Object {$_.Name -like '*metricus*' -or $_.DisplayName -like '*metricus*'}
+        $service = Get-Service -Name "Metricus" -ErrorAction SilentlyContinue
         if ($service -and $service.Status -eq 'Running') {
             Stop-Service $service.Name -Force
             Write-Log "Service stopped for rollback"
@@ -29,7 +69,7 @@ function Invoke-Rollback($backupZipPath) {
         
         # Uninstall current service
         if ($service) {
-            $wmiService = Get-WmiObject -Class Win32_Service | Where-Object {$_.Name -eq $service.Name}
+            $wmiService = Get-WmiObject -Class Win32_Service -Filter "Name='Metricus'"
             if ($wmiService) {
                 $currentServicePath = $wmiService.PathName
                 if ($currentServicePath -match '^"([^"]+)"') {
@@ -78,8 +118,14 @@ function Invoke-Rollback($backupZipPath) {
 
 try {
     Write-Log "=== METRICUS UPDATE PROCESS STARTED ==="
-    Write-Log "Zip file: $ZipPath"
+    Write-Log "Zip source: $ZipPath"
     Write-Log "Install path: $InstallPath"
+    
+    # Download/locate zip file
+    Write-Log "Attempting to get zip file..."
+    $actualZipPath = Get-ZipFile $ZipPath
+    $isDownloadedFile = ($actualZipPath -ne $ZipPath)
+    Write-Log "Zip file located at: $actualZipPath"
     
     # STEP 1-4: Pre-flight Validation
     Write-Log "=== PRE-FLIGHT VALIDATION ==="
@@ -91,27 +137,23 @@ try {
     Write-Log "Administrator privileges: Confirmed"
     
     # Validate zip file
-    if (-not (Test-Path $ZipPath)) {
-        throw "Zip file not found: $ZipPath"
-    }
-    
-    $zipInfo = Get-Item $ZipPath
-    Write-Log "Zip file found: $($zipInfo.Name) ($([math]::Round($zipInfo.Length / 1MB, 2)) MB)"
+    $zipInfo = Get-Item $actualZipPath
+    Write-Log "Zip file validated: $($zipInfo.Name) ($([math]::Round($zipInfo.Length / 1MB, 2)) MB)"
     
     # Basic zip integrity check
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+    $zip = [System.IO.Compression.ZipFile]::OpenRead($actualZipPath)
     $entryCount = $zip.Entries.Count
     $zip.Dispose()
     Write-Log "Zip integrity verified: $entryCount entries"
     
     # Find current service and version
-    $service = Get-Service | Where-Object {$_.Name -like '*metricus*' -or $_.DisplayName -like '*metricus*'}
+    $service = Get-Service -Name "Metricus" -ErrorAction SilentlyContinue
     if (-not $service) {
         throw "No Metricus service found"
     }
     
-    $wmiService = Get-WmiObject -Class Win32_Service | Where-Object {$_.Name -eq $service.Name}
+    $wmiService = Get-WmiObject -Class Win32_Service -Filter "Name='Metricus'"
     $servicePath = $wmiService.PathName
     
     if ($servicePath -match '^"([^"]+)"') {
@@ -165,7 +207,7 @@ try {
     
     # Verify service removed
     Start-Sleep -Seconds 2
-    $remainingService = Get-Service | Where-Object {$_.Name -like '*metricus*' -or $_.DisplayName -like '*metricus*'}
+    $remainingService = Get-Service -Name "Metricus" -ErrorAction SilentlyContinue
     if ($remainingService) {
         throw "Service still exists after uninstall"
     }
@@ -217,10 +259,10 @@ try {
     Write-Log "=== NEW VERSION EXTRACTION ==="
     
     # Validate zip structure in temp location
-    $tempExtractPath = "$env:TEMP\metricus-extract-$(Get-Date -Format 'yyyyMMddHHmmss')"
+    $tempExtractPath = "$env:TEMP\metricus-extract-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     New-Item -ItemType Directory -Path $tempExtractPath -Force
     
-    Expand-Archive -Path $ZipPath -DestinationPath $tempExtractPath -Force
+    Expand-Archive -Path $actualZipPath -DestinationPath $tempExtractPath -Force
     
     $metricusFolder = Get-ChildItem -Path $tempExtractPath -Directory | Where-Object {$_.Name -like 'metricus-*'} | Select-Object -First 1
     if (-not $metricusFolder) {
@@ -241,7 +283,7 @@ try {
     Remove-Item $tempExtractPath -Recurse -Force
     
     # Extract to final location
-    Expand-Archive -Path $ZipPath -DestinationPath $InstallPath -Force
+    Expand-Archive -Path $actualZipPath -DestinationPath $InstallPath -Force
     
     $newVersionFolder = Get-ChildItem -Path $InstallPath -Directory | Where-Object {$_.Name -like 'metricus-*'} | Sort-Object LastWriteTime -Descending | Select-Object -First 1
     Write-Log "New version extracted: $($newVersionFolder.Name)"
@@ -320,7 +362,7 @@ try {
     
     # Verify service registration
     Start-Sleep -Seconds 2
-    $newService = Get-Service | Where-Object {$_.Name -like '*metricus*'}
+    $newService = Get-Service -Name "Metricus" -ErrorAction SilentlyContinue
     if (-not $newService) {
         throw "New service not found after installation"
     }
@@ -359,6 +401,12 @@ try {
     
     Write-Log "Temporary files cleaned up"
     
+    # Clean up downloaded zip file if it was downloaded
+    if ($isDownloadedFile -and (Test-Path $actualZipPath)) {
+        Remove-Item $actualZipPath -Force -ErrorAction SilentlyContinue
+        Write-Log "Downloaded zip file cleaned up"
+    }
+    
     # FINAL SUCCESS
     Write-Log "=== UPDATE COMPLETED SUCCESSFULLY ==="
     Write-Log "Old version: $currentVersionName"
@@ -387,6 +435,11 @@ try {
     # Cleanup temp files
     if ($tempExtractPath -and (Test-Path $tempExtractPath)) {
         Remove-Item $tempExtractPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    
+    # Clean up downloaded zip file if it was downloaded
+    if ($isDownloadedFile -and $actualZipPath -and (Test-Path $actualZipPath)) {
+        Remove-Item $actualZipPath -Force -ErrorAction SilentlyContinue
     }
     
     exit 1

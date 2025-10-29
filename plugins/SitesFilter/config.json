@@ -5,7 +5,23 @@
       "PreserveOriginal" : false	
     },
     "Process": {
-      "Filters": [ "w3wp" ],
+      "Filters": ["w3wp.process"],
+      "PreserveOriginal": false
+    },
+    ".NET CLR Memory": {
+      "Filters": ["w3wp.net"],
+      "PreserveOriginal": false
+    },
+    ".NET CLR Exceptions": {
+      "Filters": ["w3wp.net"],
+      "PreserveOriginal": false
+    },
+    ".NET CLR LocksAndThreads": {
+      "Filters": ["w3wp.net"],
+      "PreserveOriginal": false
+    },
+    "W3SVC_W3WP": {
+      "Filters": ["w3svc"],
       "PreserveOriginal": false
     }
   }

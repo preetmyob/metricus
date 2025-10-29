@@ -24,9 +24,113 @@
     {
       "name": ".NET CLR LocksAndThreads",
       "dynamic": true,
+      "instance_regex": "^metr",
       "counters": [
         "contention rate / sec",
         "total # of contentions"
+      ]
+    },
+    {
+      "name": "HTTP Service Request Queues",
+      "dynamic": true,
+      "counters": [
+        "RejectedRequests",
+        "ArrivalRate",
+        "CurrentQueueSize"
+      ]
+    },
+    {
+      "name": "W3SVC_W3WP",
+      "dynamic": true,
+      "counters": [
+        "Active Requests",
+        "Requests / Sec",
+        "Active Threads Count",
+        "Total Threads"
+      ]
+    },
+    {
+      "name": "ASP.NET",
+      "counters": [
+        "Application Restarts",
+        "Requests Rejected",
+        "Requests Queued",
+        "Requests Current"
+      ],
+      "instances": [
+        ""
+      ]
+    },
+    {
+      "name": "ASP.NET Applications",
+      "dynamic": true,
+      "counters": [
+        "Requests Executing",
+        "Requests In Application Queue",
+        "Requests/Sec",
+        "Requests Timed Out",
+        "Request Execution Time",
+        "Requests Failed",
+        "Request Wait Time"
+      ]
+    },
+    {
+      "name": ".NET CLR Memory",
+      "dynamic": true,
+      "instance_regex": "^w3wp",
+      "counters": [
+        "# Gen 0 Collections",
+        "# Gen 1 Collections",
+        "# Gen 2 Collections",
+        "# Bytes in all Heaps",
+        "% Time in GC",
+        "Gen 0 heap size",
+        "Gen 1 heap size",
+        "Gen 2 heap size",
+        "Large Object Heap size",
+        "Allocated Bytes/sec"
+      ]
+    },
+    {
+      "name": ".NET CLR Exceptions",
+      "dynamic": true,
+      "instance_regex": "^w3wp",
+      "counters": [
+        "# of Exceps Thrown",
+        "# of Exceps Thrown / sec",
+        "# of Filters / sec",
+        "# of Finallys / sec"
+      ]
+    },
+    {
+      "name": ".NET CLR LocksAndThreads",
+      "dynamic": true,
+      "instance_regex": "^w3wp",
+      "counters": [
+        "Contention Rate / Sec",
+        "Total # of Contentions",
+        "# of current logical Threads",
+        "# of current physical Threads",
+        "# of current recognized threads",
+        "Queue Length / sec"
+      ]
+    },
+    {
+      "name": "Process",
+      "dynamic": true,
+      "instance_regex": "^w3wp",
+      "counters": [
+        "% Processor Time",
+        "% User Time",
+        "% Privileged Time",
+        "Thread Count",
+        "Handle Count",
+        "Private Bytes",
+        "Virtual Bytes",
+        "Working Set",
+        "IO Data Bytes/sec",
+        "IO Read Bytes/sec",
+        "IO Write Bytes/sec"
       ]
     }
   ]

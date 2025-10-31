@@ -131,6 +131,7 @@ namespace Metricus.Plugin
 
       public List<metric> Filter(List<metric> metrics, string categoryName, bool preserveOriginal)
       {
+        // First pass: build process ID to instance name mapping
         int count = metrics.Count;
         for (int index = 0; index < count; ++index)
         {
@@ -138,12 +139,16 @@ namespace Metricus.Plugin
           if (this.processIdCategory.Equals(metric.category, StringComparison.InvariantCultureIgnoreCase) && metric.type.Equals(this.processIdCounter, StringComparison.InvariantCultureIgnoreCase))
             SitesFilter.FilterWorkerPoolProcesses.WpNamesToIds[metric.instance] = (int) metric.value;
         }
+        
+        // Second pass: transform metrics to use app pool names
+        List<metric> result = new List<metric>();
         for (int index1 = 0; index1 < count; ++index1)
         {
           metric metric1 = metrics[index1];
           int num;
           if (metric1.category.Equals(categoryName, StringComparison.InvariantCultureIgnoreCase) && (!metric1.category.Equals(this.processIdCategory, StringComparison.InvariantCultureIgnoreCase) || !metric1.type.Equals(this.processIdCounter, StringComparison.InvariantCultureIgnoreCase)) && metric1.instance.StartsWith("w3wp", StringComparison.Ordinal) && SitesFilter.FilterWorkerPoolProcesses.WpNamesToIds.TryGetValue(metric1.instance, out num))
           {
+            bool found = false;
             for (int index2 = 0; index2 < this.serverManager.WorkerProcesses.Count; ++index2)
             {
               if (this.serverManager.WorkerProcesses[index2].ProcessId == num)
@@ -152,22 +157,33 @@ namespace Metricus.Plugin
                 metric metric2 = metric1 with
                 {
                   site = appPoolName,
-                  instance = (string) null
+                  instance = "_Total"
                 };
                 if (this.isDebug)
                 {
                   Console.WriteLine(string.Format("old: {0}", (object) metric1));
                   Console.WriteLine(string.Format("new: {0}", (object) metric2));
                 }
+                result.Add(metric2);
                 if (preserveOriginal)
-                  metrics.Add(metric1);
-                else
-                  metrics[index1] = metric2;
+                  result.Add(metric1);
+                found = true;
+                break;
               }
             }
+            if (!found)
+            {
+              // Process not found in worker processes, keep original
+              result.Add(metric1);
+            }
+          }
+          else
+          {
+            // Metric doesn't match criteria, keep as-is
+            result.Add(metric1);
           }
         }
-        return metrics;
+        return result;
       }
     }
 
@@ -189,27 +205,43 @@ namespace Metricus.Plugin
           }
           else
           {
-            Match match = SitesFilter.FilterW3SvcW3Wp.AppPoolRegex.Match(metric1.instance);
-            if (!match.Success)
+            // Skip _Total instance
+            if (metric1.instance.Equals("_Total", StringComparison.InvariantCultureIgnoreCase))
             {
-              metricList.Add(metric1);
+              if (preserveOriginal)
+                metricList.Add(metric1);
+              continue;
+            }
+            
+            Match match = SitesFilter.FilterW3SvcW3Wp.AppPoolRegex.Match(metric1.instance);
+            string siteName;
+            
+            if (match.Success)
+            {
+              // W3SVC_W3WP format: "8140_adv73270kdde_173606a4"
+              siteName = match.Groups["AppPool"].Value;
             }
             else
             {
-              string str = match.Groups["AppPool"].Value;
-              metric metric2 = metric1 with
-              {
-                site = str,
-                instance = str
-              };
-              if (this._isDebug)
-              {
-                Console.WriteLine(string.Format("old: {0}", (object) metric1));
-                Console.WriteLine(string.Format("new: {0}", (object) metric2));
-              }
-              if (preserveOriginal)
-                metricList.Add(metric1);
+              // web service format: instance IS the site name "adv73270kdde_173606a4"
+              siteName = metric1.instance;
             }
+            
+            metric metric2 = metric1 with
+            {
+              site = siteName,
+              instance = "_Total"
+            };
+            
+            if (this._isDebug)
+            {
+              Console.WriteLine(string.Format("old: {0}", (object) metric1));
+              Console.WriteLine(string.Format("new: {0}", (object) metric2));
+            }
+            
+            metricList.Add(metric2);
+            if (preserveOriginal)
+              metricList.Add(metric1);
           }
         }
         return metricList;
@@ -240,20 +272,41 @@ namespace Metricus.Plugin
             metricList.Add(metric2);
           else if (metric1.instance.Contains(SitesFilter.FilterAspNetC.PathSansId))
           {
-            string str;
-            if (this.siteIdsToNames.TryGetValue(int.Parse(SitesFilter.FilterAspNetC.MatchPathWithId.Match(metric1.instance).Groups[1].Value), out str))
+            try
             {
-              metric2.site = str;
-              metric2.instance = str;
-              if (this._isDebug)
+              Match match = SitesFilter.FilterAspNetC.MatchPathWithId.Match(metric1.instance);
+              if (match.Success && match.Groups.Count > 1)
               {
-                Console.WriteLine(string.Format("old: {0}", (object) metric1));
-                Console.WriteLine(string.Format("new: {0}", (object) metric2));
+                int siteId = int.Parse(match.Groups[1].Value);
+                string str;
+                if (this.siteIdsToNames.TryGetValue(siteId, out str))
+                {
+                  metric2.site = str;
+                  metric2.instance = str;
+                  if (this._isDebug)
+                  {
+                    Console.WriteLine(string.Format("old: {0}", (object) metric1));
+                    Console.WriteLine(string.Format("new: {0}", (object) metric2));
+                  }
+                  metricList.Add(metric2);
+                  if (preserveOriginal)
+                    metricList.Add(metric1);
+                }
+                else if (this._isDebug)
+                {
+                  Console.WriteLine(string.Format("Site ID {0} not found in siteIdsToNames for metric: {1}", (object) siteId, (object) metric1.instance));
+                }
               }
-              metricList.Add(metric2);
+              else if (this._isDebug)
+              {
+                Console.WriteLine(string.Format("Regex match failed for instance: {0}", (object) metric1.instance));
+              }
             }
-            if (preserveOriginal)
-              metricList.Add(metric1);
+            catch (Exception ex)
+            {
+              Console.WriteLine(string.Format("Error parsing site ID from instance '{0}': {1}", (object) metric1.instance, (object) ex.Message));
+            }
+            // Site ID lookup failed or parsing error - drop the metric as it's an internal IIS identifier
           }
           else
             metricList.Add(metric2);

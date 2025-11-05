@@ -32,7 +32,7 @@ $ErrorActionPreference = "Stop"
 $CurrentDir = Get-Location
 $SolutionPath = Join-Path $CurrentDir "met.sln"
 if (-not (Test-Path $SolutionPath)) {
-    Write-Host "❌ met.sln not found in current directory!" -ForegroundColor Red
+    Write-Host "[ERROR] met.sln not found in current directory!" -ForegroundColor Red
     Write-Host "Current directory: $CurrentDir" -ForegroundColor Gray
     Write-Host "`nPlease run this script from the directory containing met.sln:" -ForegroundColor Yellow
     Write-Host "cd /path/to/metricus" -ForegroundColor Gray
@@ -73,7 +73,7 @@ if ($IsOnMappedDrive) {
                 
                 Copy-Item $_.FullName $TargetPath -Force
                 if ($Pattern -eq "packages.config") {
-                    Write-Host "  ✓ $RelativePath" -ForegroundColor Gray
+                    Write-Host "  [OK] $RelativePath" -ForegroundColor Gray
                 }
             }
         }
@@ -83,7 +83,7 @@ if ($IsOnMappedDrive) {
             $_.Extension -in @('.sln', '.cs', '.md', '.txt') -or $_.Name -eq 'LICENSE' 
         } | ForEach-Object {
             Copy-Item $_.FullName (Join-Path $TempBuildDir $_.Name) -Force
-            Write-Host "  ✓ $($_.Name)" -ForegroundColor Gray
+            Write-Host "  [OK] $($_.Name)" -ForegroundColor Gray
         }
         
         # Copy directories, excluding problematic ones
@@ -100,13 +100,13 @@ if ($IsOnMappedDrive) {
                 try {
                     # Use robocopy for directory copying with exclusions
                     $robocopyResult = & robocopy $SourceDir $TargetDir /E /XD bin obj .vs .git packages TestResults /XF *.user *.suo *.cache /NFL /NDL /NJH /NJS /NC /NS /NP
-                    Write-Host "  ✓ $DirName copied" -ForegroundColor Gray
+                    Write-Host "  [OK] $DirName copied" -ForegroundColor Gray
                 }
                 catch {
                     # Fallback to PowerShell copy
                     Write-Host "  Robocopy failed, using PowerShell copy..." -ForegroundColor Yellow
                     Copy-Item $SourceDir $TargetDir -Recurse -Force -ErrorAction SilentlyContinue
-                    Write-Host "  ✓ $DirName copied (fallback)" -ForegroundColor Gray
+                    Write-Host "  [OK] $DirName copied (fallback)" -ForegroundColor Gray
                 }
             }
         }
@@ -131,13 +131,13 @@ if ($IsOnMappedDrive) {
         # Set cleanup flag for temp directory
         $script:CleanupTempDir = $TempBuildDir
         
-        Write-Host "✅ Source copied to local temp directory" -ForegroundColor Green
+        Write-Host "[SUCCESS] Source copied to local temp directory" -ForegroundColor Green
     }
     catch {
-        Write-Host "❌ Failed to copy source to temp directory: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[ERROR] Failed to copy source to temp directory: $($_.Exception.Message)" -ForegroundColor Red
         throw "Cannot prepare build environment"
     }
-}
+} # End of if ($IsOnMappedDrive)
 
 # Function to find MSBuild
 function Find-MSBuild {
@@ -159,7 +159,7 @@ function Find-MSBuild {
             
             foreach ($Path in $MsBuildPaths) {
                 if (Test-Path $Path) {
-                    Write-Host "  ✓ Found MSBuild: $Path" -ForegroundColor Green
+                    Write-Host "  [OK] Found MSBuild: $Path" -ForegroundColor Green
                     return $Path
                 }
             }
@@ -179,7 +179,7 @@ function Find-MSBuild {
     
     foreach ($Path in $CommonPaths) {
         if (Test-Path $Path) {
-            Write-Host "  ✓ Found MSBuild: $Path" -ForegroundColor Green
+            Write-Host "  [OK] Found MSBuild: $Path" -ForegroundColor Green
             return $Path
         }
     }
@@ -188,7 +188,7 @@ function Find-MSBuild {
     try {
         $null = & msbuild -version 2>$null
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "  ✓ Found MSBuild in PATH" -ForegroundColor Green
+            Write-Host "  [OK] Found MSBuild in PATH" -ForegroundColor Green
             return "msbuild"  # Use command from PATH
         }
     } catch { }
@@ -214,15 +214,15 @@ try {
         try {
             $NetFramework = Get-ItemProperty "HKLM:SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\" -Name Release -ErrorAction SilentlyContinue
             if ($NetFramework.Release -ge 528040) {  # .NET Framework 4.8
-                Write-Host "  ✓ .NET Framework 4.8+ found" -ForegroundColor Green
+                Write-Host "  [OK] .NET Framework 4.8+ found" -ForegroundColor Green
             } else {
-                Write-Host "  ❌ .NET Framework 4.8+ required" -ForegroundColor Red
+                Write-Host "  [ERROR] .NET Framework 4.8+ required" -ForegroundColor Red
                 $AllGood = $false
                 $MissingTools += ".NET Framework 4.8"
             }
         }
         catch {
-            Write-Host "  ⚠️  Could not detect .NET Framework version" -ForegroundColor Yellow
+            Write-Host "  [WARNING] Could not detect .NET Framework version" -ForegroundColor Yellow
         }
         
         # Check for MSBuild (required)
@@ -230,32 +230,32 @@ try {
         $script:MSBuildPath = Find-MSBuild
         
         if ($script:MSBuildPath) {
-            Write-Host "  ✓ MSBuild ready" -ForegroundColor Green
+            Write-Host "  [OK] MSBuild ready" -ForegroundColor Green
         } else {
-            Write-Host "  ❌ MSBuild not found" -ForegroundColor Red
+            Write-Host "  [ERROR] MSBuild not found" -ForegroundColor Red
             $AllGood = $false
             $MissingTools += "MSBuild"
         }
         
         # Fail fast if missing required dependencies
         if (-not $AllGood) {
-            Write-Host "`n❌ Missing required dependencies!" -ForegroundColor Red
+            Write-Host "`n[ERROR] Missing required dependencies!" -ForegroundColor Red
             Write-Host "`nTo fix this, install:" -ForegroundColor Yellow
             
             if ($MissingTools -contains ".NET Framework 4.8") {
-                Write-Host "`n🔴 .NET Framework 4.8 Developer Pack" -ForegroundColor Red
+                Write-Host "`n[REQUIRED] .NET Framework 4.8 Developer Pack" -ForegroundColor Red
                 Write-Host "   Download: https://dotnet.microsoft.com/download/dotnet-framework/net48" -ForegroundColor Gray
             }
             
             if ($MissingTools -contains "MSBuild") {
-                Write-Host "`n🔴 MSBuild (Visual Studio Build Tools)" -ForegroundColor Red
+                Write-Host "`n[REQUIRED] MSBuild (Visual Studio Build Tools)" -ForegroundColor Red
                 Write-Host "   Download: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022" -ForegroundColor Gray
             }
             
             throw "Missing required build dependencies"
         }
         
-        Write-Host "✅ Dependencies OK" -ForegroundColor Green
+        Write-Host "[SUCCESS] Dependencies OK" -ForegroundColor Green
     }
 
     # Extract version from GlobalAssemblyInfo.cs
@@ -327,7 +327,7 @@ try {
             & $script:MSBuildPath "`"$SolutionFileName`"" /t:Restore,Rebuild /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
             if ($LASTEXITCODE -eq 0) {
                 $BuildSuccess = $true
-                Write-Host "✅ Build successful (approach 1)" -ForegroundColor Green
+                Write-Host "[SUCCESS] Build successful (approach 1)" -ForegroundColor Green
             }
         }
         finally {
@@ -356,7 +356,7 @@ try {
                 & $script:MSBuildPath "met.sln" /t:Rebuild /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
                 if ($LASTEXITCODE -eq 0) {
                     $BuildSuccess = $true
-                    Write-Host "✅ Build successful (approach 2)" -ForegroundColor Green
+                    Write-Host "[SUCCESS] Build successful (approach 2)" -ForegroundColor Green
                 }
             }
             finally {
@@ -374,7 +374,7 @@ try {
             & $script:MSBuildPath "`"$CleanSolutionPath`"" /t:Restore,Rebuild /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
             if ($LASTEXITCODE -eq 0) {
                 $BuildSuccess = $true
-                Write-Host "✅ Build successful (approach 3 - BOM fix)" -ForegroundColor Green
+                Write-Host "[SUCCESS] Build successful (approach 3 - BOM fix)" -ForegroundColor Green
             }
         }
         
@@ -383,7 +383,7 @@ try {
         }
     }
     catch {
-        Write-Host "`n❌ Build failed" -ForegroundColor Red
+        Write-Host "`n[ERROR] Build failed" -ForegroundColor Red
         Write-Host "`nTroubleshooting steps:" -ForegroundColor Yellow
         Write-Host "1. Check that all NuGet packages can be downloaded" -ForegroundColor Gray
         Write-Host "2. Verify all project references are correct" -ForegroundColor Gray
@@ -405,7 +405,7 @@ try {
         $SourcePath = Join-Path $MainBinPath $File
         if (Test-Path $SourcePath) {
             Copy-Item $SourcePath $ReleaseDir
-            Write-Host "  ✓ $File" -ForegroundColor Gray
+            Write-Host "  [OK] $File" -ForegroundColor Gray
             Write-Host "    Source: $SourcePath" -ForegroundColor DarkGray
         } else {
             Write-Warning "Missing: $File"
@@ -425,7 +425,7 @@ try {
             $TargetPath = Join-Path $ReleaseDir $_.Name
             if (-not (Test-Path $TargetPath)) {
                 Copy-Item $_.FullName $ReleaseDir
-                Write-Host "  ✓ $($_.Name)" -ForegroundColor Gray
+                Write-Host "  [OK] $($_.Name)" -ForegroundColor Gray
                 Write-Host "    Source: $($_.FullName)" -ForegroundColor DarkGray
             }
         }
@@ -452,7 +452,7 @@ try {
                 
                 if ($FoundDll) {
                     Copy-Item $FoundDll.FullName $ReleaseDir
-                    Write-Host "  ✓ $($FoundDll.Name) (from packages)" -ForegroundColor Gray
+                    Write-Host "  [OK] $($FoundDll.Name) (from packages)" -ForegroundColor Gray
                     Write-Host "    Source: $($FoundDll.FullName)" -ForegroundColor DarkGray
                 }
             }
@@ -469,7 +469,7 @@ try {
             $TargetPath = Join-Path $ReleaseDir $_.Name
             if (-not (Test-Path $TargetPath)) {
                 Copy-Item $_.FullName $ReleaseDir
-                Write-Host "  ✓ $($_.Name) (from Debug)" -ForegroundColor Gray
+                Write-Host "  [OK] $($_.Name) (from Debug)" -ForegroundColor Gray
                 Write-Host "    Source: $($_.FullName)" -ForegroundColor DarkGray
             }
         }
@@ -481,7 +481,7 @@ try {
                 $TargetPath = Join-Path $ReleaseDir $_.Name
                 if (-not (Test-Path $TargetPath)) {
                     Copy-Item $_.FullName $ReleaseDir
-                    Write-Host "  ✓ $($_.Name) (from Debug plugins)" -ForegroundColor Gray
+                    Write-Host "  [OK] $($_.Name) (from Debug plugins)" -ForegroundColor Gray
                     Write-Host "    Source: $($_.FullName)" -ForegroundColor DarkGray
                 }
             }
@@ -503,10 +503,10 @@ try {
                 
                 if ($FoundXml) {
                     Copy-Item $FoundXml.FullName $ReleaseDir
-                    Write-Host "  ✓ $XmlFile (from packages)" -ForegroundColor Gray
+                    Write-Host "  [OK] $XmlFile (from packages)" -ForegroundColor Gray
                     Write-Host "    Source: $($FoundXml.FullName)" -ForegroundColor DarkGray
                 } else {
-                    Write-Host "  ⚠️  $XmlFile not found" -ForegroundColor Yellow
+                    Write-Host "  [WARNING] $XmlFile not found" -ForegroundColor Yellow
                 }
             }
         }
@@ -546,7 +546,7 @@ try {
                     Write-Host "  Found $PluginFolder files in: $PluginBinPath" -ForegroundColor Gray
                     foreach ($File in $AllFiles) {
                         Copy-Item $File.FullName $PluginReleaseDir
-                        Write-Host "  ✓ $PluginFolder\$($File.Name)" -ForegroundColor Gray
+                        Write-Host "  [OK] $PluginFolder\$($File.Name)" -ForegroundColor Gray
                         Write-Host "    Source: $($File.FullName)" -ForegroundColor DarkGray
                     }
                     $PluginDllFound = $true
@@ -593,7 +593,7 @@ try {
 </configuration>
 "@
                 [System.IO.File]::WriteAllText($PluginConfigPath, $ConfigContent, [System.Text.Encoding]::UTF8)
-                Write-Host "  ✓ $PluginFolder\$PluginProject.dll.config (generated)" -ForegroundColor Gray
+                Write-Host "  [OK] $PluginFolder\$PluginProject.dll.config (generated)" -ForegroundColor Gray
             }
         }
     }
@@ -618,7 +618,7 @@ try {
         
         if (Test-Path $SourcePath) {
             Copy-Item $SourcePath $TargetPath
-            Write-Host "  ✓ $($ConfigFile.Target)" -ForegroundColor Gray
+            Write-Host "  [OK] $($ConfigFile.Target)" -ForegroundColor Gray
             Write-Host "    Source: $SourcePath" -ForegroundColor DarkGray
         } else {
             Write-Warning "Config file not found: $($ConfigFile.Source)"
@@ -646,7 +646,7 @@ try {
                     }
                     
                     $MainConfig | ConvertTo-Json -Depth 10 | Set-Content $MainConfigPath
-                    Write-Host "  ✓ Main config updated" -ForegroundColor Gray
+                    Write-Host "  [OK] Main config updated" -ForegroundColor Gray
                 }
                 
                 # Apply plugin config overrides
@@ -668,7 +668,7 @@ try {
                             }
                             
                             $PluginConfig | ConvertTo-Json -Depth 10 | Set-Content $PluginConfigPath
-                            Write-Host "  ✓ $PluginName config updated" -ForegroundColor Gray
+                            Write-Host "  [OK] $PluginName config updated" -ForegroundColor Gray
                         }
                     }
                 }
@@ -698,7 +698,7 @@ try {
         $SourcePath = Join-Path $ScriptDir $TestFile
         if (Test-Path $SourcePath) {
             Copy-Item $SourcePath $TestLoadDir
-            Write-Host "  ✓ testload\$TestFile" -ForegroundColor Gray
+            Write-Host "  [OK] testload\$TestFile" -ForegroundColor Gray
             Write-Host "    Source: $SourcePath" -ForegroundColor DarkGray
         } else {
             Write-Warning "Test load file not found: $TestFile"
@@ -726,7 +726,7 @@ try {
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         [System.IO.Compression.ZipFile]::CreateFromDirectory($TempZipDir, $ZipPath)
         
-        Write-Host "  ✓ Zip created with proper folder structure: metricus-$Version/" -ForegroundColor Gray
+        Write-Host "  [OK] Zip created with proper folder structure: metricus-$Version/" -ForegroundColor Gray
     }
     catch {
         # Fallback to PowerShell Compress-Archive with proper structure
@@ -768,13 +768,13 @@ try {
         $ZipPath = $OriginalZipPath
     }
 
-    Write-Host "`n✅ Ready to deploy!" -ForegroundColor Green
+    Write-Host "`n[SUCCESS] Ready to deploy!" -ForegroundColor Green
     Write-Host "Final package location: $ZipPath" -ForegroundColor Cyan
 
 }
 catch {
     # Re-throw the error
-    Write-Host "`n❌ Build failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "`n[ERROR] Build failed: $($_.Exception.Message)" -ForegroundColor Red
     throw
 }
 finally {
@@ -783,10 +783,10 @@ finally {
         Write-Host "`nCleaning up temp directory..." -ForegroundColor Gray
         try {
             Remove-Item $script:CleanupTempDir -Recurse -Force
-            Write-Host "✅ Temp directory cleaned up" -ForegroundColor Green
+            Write-Host "[SUCCESS] Temp directory cleaned up" -ForegroundColor Green
         }
         catch {
-            Write-Host "⚠️  Could not clean up temp directory: $script:CleanupTempDir" -ForegroundColor Yellow
+            Write-Host "[WARNING] Could not clean up temp directory: $script:CleanupTempDir" -ForegroundColor Yellow
         }
     }
 }

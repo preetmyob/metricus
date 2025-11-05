@@ -70,7 +70,9 @@
       <Link>Properties\GlobalAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="Program.cs" />
-    <Compile Include="Metricus\PluginLoader.cs" />
+    <Compile Include="MetricusService.cs" />
+    <Compile Include="MetricusConfig.cs" />
+    <Compile Include="PluginLoader.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

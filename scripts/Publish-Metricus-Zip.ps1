@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Builds the Metricus solution and creates a deployment-ready zip package.
-    Must be run from the directory containing metricus.sln
+    Must be run from the directory containing met.sln
 
 .EXAMPLE
     .\scripts\Publish-Metricus-Zip.ps1
@@ -30,12 +30,12 @@ $ErrorActionPreference = "Stop"
 
 # Check that we're running from the correct directory
 $CurrentDir = Get-Location
-$SolutionPath = Join-Path $CurrentDir "metricus.sln"
+$SolutionPath = Join-Path $CurrentDir "met.sln"
 if (-not (Test-Path $SolutionPath)) {
-    Write-Host "❌ metricus.sln not found in current directory!" -ForegroundColor Red
+    Write-Host "❌ met.sln not found in current directory!" -ForegroundColor Red
     Write-Host "Current directory: $CurrentDir" -ForegroundColor Gray
-    Write-Host "`nPlease run this script from the directory containing metricus.sln:" -ForegroundColor Yellow
-    Write-Host "cd /path/to/metricus-refactor" -ForegroundColor Gray
+    Write-Host "`nPlease run this script from the directory containing met.sln:" -ForegroundColor Yellow
+    Write-Host "cd /path/to/metricus" -ForegroundColor Gray
     Write-Host ".\scripts\Publish-Metricus-Zip.ps1" -ForegroundColor Gray
     throw "Solution file not found in current directory"
 }
@@ -87,8 +87,9 @@ if ($IsOnMappedDrive) {
         }
         
         # Copy directories, excluding problematic ones
-        $ExcludeDirs = @("bin", "obj", ".vs", ".git", "packages", "TestResults")
-        $DirsToInclude = @("metricus", "PluginInterface", "Plugins", "scripts", "tests")
+        $ExcludeDirs = @("bin", "obj", ".vs", ".git", "TestResults")
+        $DirsToInclude = @("metricus", "PluginInterface", "plugins", "scripts", "tests", "packages",
+                          "ConsoleOut", "GraphiteOut", "SitesFilter", "PerformanceCounter", "SumoOut")
         
         foreach ($DirName in $DirsToInclude) {
             $SourceDir = Join-Path $SolutionRoot $DirName
@@ -111,7 +112,7 @@ if ($IsOnMappedDrive) {
         }
         
         # Verify essential files were copied
-        $TempSolutionPath = Join-Path $TempBuildDir "metricus.sln"
+        $TempSolutionPath = Join-Path $TempBuildDir "met.sln"
         if (-not (Test-Path $TempSolutionPath)) {
             throw "Solution file was not copied successfully"
         }
@@ -136,6 +137,63 @@ if ($IsOnMappedDrive) {
         Write-Host "❌ Failed to copy source to temp directory: $($_.Exception.Message)" -ForegroundColor Red
         throw "Cannot prepare build environment"
     }
+}
+
+# Function to find MSBuild
+function Find-MSBuild {
+    # Try to find MSBuild using vswhere (preferred method)
+    $VsWherePath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    
+    if (Test-Path $VsWherePath) {
+        Write-Host "  Using vswhere to locate MSBuild..." -ForegroundColor Gray
+        
+        # Get latest VS installation with MSBuild
+        $VsPath = & $VsWherePath -latest -requires Microsoft.Component.MSBuild -property installationPath
+        
+        if ($VsPath) {
+            # Try different MSBuild versions
+            $MsBuildPaths = @(
+                "$VsPath\MSBuild\Current\Bin\MSBuild.exe",
+                "$VsPath\MSBuild\15.0\Bin\MSBuild.exe"
+            )
+            
+            foreach ($Path in $MsBuildPaths) {
+                if (Test-Path $Path) {
+                    Write-Host "  ✓ Found MSBuild: $Path" -ForegroundColor Green
+                    return $Path
+                }
+            }
+        }
+    }
+    
+    # Fallback: Try common installation paths
+    $CommonPaths = @(
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe",
+        "${env:ProgramFiles(x86)}\MSBuild\14.0\Bin\MSBuild.exe"
+    )
+    
+    foreach ($Path in $CommonPaths) {
+        if (Test-Path $Path) {
+            Write-Host "  ✓ Found MSBuild: $Path" -ForegroundColor Green
+            return $Path
+        }
+    }
+    
+    # Last resort: Check if msbuild is in PATH
+    try {
+        $null = & msbuild -version 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  ✓ Found MSBuild in PATH" -ForegroundColor Green
+            return "msbuild"  # Use command from PATH
+        }
+    } catch { }
+    
+    return $null
 }
 
 $OutputPath = Join-Path $SolutionRoot "releases"
@@ -168,17 +226,12 @@ try {
         }
         
         # Check for MSBuild (required)
-        $HasMSBuild = $false
-        try {
-            $null = & msbuild -version 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "  ✓ MSBuild found" -ForegroundColor Green
-                $HasMSBuild = $true
-            }
-        }
-        catch { }
+        Write-Host "  Locating MSBuild..." -ForegroundColor Gray
+        $script:MSBuildPath = Find-MSBuild
         
-        if (-not $HasMSBuild) {
+        if ($script:MSBuildPath) {
+            Write-Host "  ✓ MSBuild ready" -ForegroundColor Green
+        } else {
             Write-Host "  ❌ MSBuild not found" -ForegroundColor Red
             $AllGood = $false
             $MissingTools += "MSBuild"
@@ -271,7 +324,7 @@ try {
             $SolutionFileName = Split-Path $SolutionPath -Leaf
             Write-Host "Trying from solution directory with filename: $SolutionFileName" -ForegroundColor Gray
             
-            & msbuild "`"$SolutionFileName`"" /t:Restore,Rebuild /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
+            & $script:MSBuildPath "`"$SolutionFileName`"" /t:Restore,Rebuild /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
             if ($LASTEXITCODE -eq 0) {
                 $BuildSuccess = $true
                 Write-Host "✅ Build successful (approach 1)" -ForegroundColor Green
@@ -292,15 +345,15 @@ try {
                 $LocalNuGet = Join-Path $ScriptDir "nuget.exe"
                 if (Test-Path $LocalNuGet) {
                     Write-Host "Using local nuget.exe for restore..." -ForegroundColor Gray
-                    & $LocalNuGet restore "metricus.sln"
+                    & $LocalNuGet restore "met.sln"
                 } else {
                     Write-Host "Using MSBuild restore..." -ForegroundColor Gray
-                    & msbuild "metricus.sln" /t:Restore /verbosity:minimal
+                    & $script:MSBuildPath "met.sln" /t:Restore /verbosity:minimal
                 }
                 
                 # Then build
                 Write-Host "Building after restore..." -ForegroundColor Gray
-                & msbuild "metricus.sln" /t:Rebuild /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
+                & $script:MSBuildPath "met.sln" /t:Rebuild /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
                 if ($LASTEXITCODE -eq 0) {
                     $BuildSuccess = $true
                     Write-Host "✅ Build successful (approach 2)" -ForegroundColor Green
@@ -318,7 +371,7 @@ try {
             $CleanSolutionPath = $SolutionPath -replace '\.sln$', '_clean.sln'
             [System.IO.File]::WriteAllText($CleanSolutionPath, $SolutionContent, [System.Text.Encoding]::UTF8)
             
-            & msbuild "`"$CleanSolutionPath`"" /t:Restore,Rebuild /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
+            & $script:MSBuildPath "`"$CleanSolutionPath`"" /t:Restore,Rebuild /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
             if ($LASTEXITCODE -eq 0) {
                 $BuildSuccess = $true
                 Write-Host "✅ Build successful (approach 3 - BOM fix)" -ForegroundColor Green
@@ -353,6 +406,7 @@ try {
         if (Test-Path $SourcePath) {
             Copy-Item $SourcePath $ReleaseDir
             Write-Host "  ✓ $File" -ForegroundColor Gray
+            Write-Host "    Source: $SourcePath" -ForegroundColor DarkGray
         } else {
             Write-Warning "Missing: $File"
         }
@@ -360,12 +414,48 @@ try {
 
     # Copy dependencies (including System DLLs that might be missing in Release)
     $DependencyPatterns = @("Topshelf*.dll", "Topshelf*.xml", "NLog*.dll", "NLog*.xml", 
-                           "Newtonsoft.Json*.dll", "System.*.dll", "System.*.xml", "ServiceStack*.dll", "ServiceStack*.xml",
+                           "Newtonsoft.Json*.dll", "Newtonsoft.Json*.xml",
+                           "System.*.dll", "System.*.xml", 
+                           "ServiceStack*.dll", "ServiceStack*.xml",
                            "Microsoft.*.dll", "Microsoft.*.xml")
+    
+    # First try to copy from main bin path
     foreach ($Pattern in $DependencyPatterns) {
-        Get-ChildItem -Path $MainBinPath -Filter $Pattern | ForEach-Object {
-            Copy-Item $_.FullName $ReleaseDir
-            Write-Host "  ✓ $($_.Name)" -ForegroundColor Gray
+        Get-ChildItem -Path $MainBinPath -Filter $Pattern -ErrorAction SilentlyContinue | ForEach-Object {
+            $TargetPath = Join-Path $ReleaseDir $_.Name
+            if (-not (Test-Path $TargetPath)) {
+                Copy-Item $_.FullName $ReleaseDir
+                Write-Host "  ✓ $($_.Name)" -ForegroundColor Gray
+                Write-Host "    Source: $($_.FullName)" -ForegroundColor DarkGray
+            }
+        }
+    }
+    
+    # Also copy System DLLs from packages folder if not found in bin
+    $RequiredSystemDlls = @(
+        "System.Buffers.dll", "System.Buffers.xml",
+        "System.Memory.dll", "System.Memory.xml",
+        "System.Numerics.Vectors.dll", "System.Numerics.Vectors.xml",
+        "System.Runtime.CompilerServices.Unsafe.dll", "System.Runtime.CompilerServices.Unsafe.xml",
+        "System.Diagnostics.DiagnosticSource.dll", "System.Diagnostics.DiagnosticSource.xml"
+    )
+    
+    $PackagesPath = Join-Path $SolutionRoot "packages"
+    if (Test-Path $PackagesPath) {
+        foreach ($DllName in $RequiredSystemDlls) {
+            $TargetPath = Join-Path $ReleaseDir $DllName
+            if (-not (Test-Path $TargetPath)) {
+                # Search for the DLL in packages folder
+                $FoundDll = Get-ChildItem -Path $PackagesPath -Filter $DllName -Recurse -ErrorAction SilentlyContinue | 
+                    Where-Object { $_.FullName -match '\\lib\\' } | 
+                    Select-Object -First 1
+                
+                if ($FoundDll) {
+                    Copy-Item $FoundDll.FullName $ReleaseDir
+                    Write-Host "  ✓ $($FoundDll.Name) (from packages)" -ForegroundColor Gray
+                    Write-Host "    Source: $($FoundDll.FullName)" -ForegroundColor DarkGray
+                }
+            }
         }
     }
     
@@ -380,6 +470,7 @@ try {
             if (-not (Test-Path $TargetPath)) {
                 Copy-Item $_.FullName $ReleaseDir
                 Write-Host "  ✓ $($_.Name) (from Debug)" -ForegroundColor Gray
+                Write-Host "    Source: $($_.FullName)" -ForegroundColor DarkGray
             }
         }
         
@@ -391,6 +482,31 @@ try {
                 if (-not (Test-Path $TargetPath)) {
                     Copy-Item $_.FullName $ReleaseDir
                     Write-Host "  ✓ $($_.Name) (from Debug plugins)" -ForegroundColor Gray
+                    Write-Host "    Source: $($_.FullName)" -ForegroundColor DarkGray
+                }
+            }
+        }
+    }
+    
+    # Also check for missing XML files from packages folder
+    Write-Host "Ensuring all XML documentation files are present..." -ForegroundColor Gray
+    $MissingXmlFiles = @("Topshelf.xml", "Topshelf.NLog.xml")
+    $PackagesPath = Join-Path $SolutionRoot "packages"
+    
+    if (Test-Path $PackagesPath) {
+        foreach ($XmlFile in $MissingXmlFiles) {
+            $TargetPath = Join-Path $ReleaseDir $XmlFile
+            if (-not (Test-Path $TargetPath)) {
+                # Search in packages folder
+                $FoundXml = Get-ChildItem -Path $PackagesPath -Filter $XmlFile -Recurse -ErrorAction SilentlyContinue | 
+                    Select-Object -First 1
+                
+                if ($FoundXml) {
+                    Copy-Item $FoundXml.FullName $ReleaseDir
+                    Write-Host "  ✓ $XmlFile (from packages)" -ForegroundColor Gray
+                    Write-Host "    Source: $($FoundXml.FullName)" -ForegroundColor DarkGray
+                } else {
+                    Write-Host "  ⚠️  $XmlFile not found" -ForegroundColor Yellow
                 }
             }
         }
@@ -400,16 +516,24 @@ try {
     $PluginsDir = Join-Path $ReleaseDir "Plugins"
     New-Item -ItemType Directory -Path $PluginsDir -Force | Out-Null
 
-    $PluginNames = @("ConsoleOut", "GraphiteOut", "PerfCounter", "SitesFilter")
-    foreach ($PluginName in $PluginNames) {
-        $PluginReleaseDir = Join-Path $PluginsDir $PluginName
+    # Plugin name mapping: folder name -> project name
+    $PluginMapping = @{
+        "ConsoleOut" = "ConsoleOut"
+        "GraphiteOut" = "GraphiteOut"
+        "PerfCounter" = "PerformanceCounter"
+        "SitesFilter" = "SitesFilter"
+    }
+    
+    foreach ($PluginFolder in $PluginMapping.Keys) {
+        $PluginProject = $PluginMapping[$PluginFolder]
+        $PluginReleaseDir = Join-Path $PluginsDir $PluginFolder
         New-Item -ItemType Directory -Path $PluginReleaseDir -Force | Out-Null
         
-        # Try multiple possible locations for plugin DLLs
+        # met.sln builds plugins to /bin/Release/plugins/{PluginFolder}/ (shared output directory)
+        # Also try project-specific bin/Release as fallback
         $PossiblePaths = @(
-            (Join-Path $SolutionRoot "Plugins\$PluginName\bin\Release"),
-            (Join-Path $SolutionRoot "metricus\bin\Release\Plugins\$PluginName"),
-            (Join-Path $SolutionRoot "metricus\bin\Debug\Plugins\$PluginName")
+            (Join-Path $SolutionRoot "bin\Release\plugins\$PluginFolder"),
+            (Join-Path $SolutionRoot "$PluginProject\bin\Release")
         )
         
         $PluginDllFound = $false
@@ -419,10 +543,11 @@ try {
                     $_.Extension -in @('.dll', '.config', '.xml') 
                 }
                 if ($AllFiles.Count -gt 0) {
-                    Write-Host "  Found $PluginName files in: $PluginBinPath" -ForegroundColor Gray
+                    Write-Host "  Found $PluginFolder files in: $PluginBinPath" -ForegroundColor Gray
                     foreach ($File in $AllFiles) {
                         Copy-Item $File.FullName $PluginReleaseDir
-                        Write-Host "  ✓ $PluginName\$($File.Name)" -ForegroundColor Gray
+                        Write-Host "  ✓ $PluginFolder\$($File.Name)" -ForegroundColor Gray
+                        Write-Host "    Source: $($File.FullName)" -ForegroundColor DarkGray
                     }
                     $PluginDllFound = $true
                     break
@@ -431,16 +556,16 @@ try {
         }
         
         if (-not $PluginDllFound) {
-            Write-Warning "Plugin DLLs not found for $PluginName in any of the expected locations"
+            Write-Warning "Plugin DLLs not found for $PluginProject ($PluginFolder) in any of the expected locations"
             Write-Host "  Searched:" -ForegroundColor Yellow
             $PossiblePaths | ForEach-Object { Write-Host "    - $_" -ForegroundColor Yellow }
         } else {
             # Create plugin .config file with assembly binding redirects if needed
-            $PluginDllPath = Join-Path $PluginReleaseDir "$PluginName.dll"
-            $PluginConfigPath = Join-Path $PluginReleaseDir "$PluginName.dll.config"
+            $PluginDllPath = Join-Path $PluginReleaseDir "$PluginProject.dll"
+            $PluginConfigPath = Join-Path $PluginReleaseDir "$PluginProject.dll.config"
             
             if ((Test-Path $PluginDllPath) -and (-not (Test-Path $PluginConfigPath))) {
-                Write-Host "  Creating assembly binding redirects for $PluginName..." -ForegroundColor Gray
+                Write-Host "  Creating assembly binding redirects for $PluginProject..." -ForegroundColor Gray
                 
                 $ConfigContent = @"
 <?xml version="1.0" encoding="utf-8"?>
@@ -468,7 +593,7 @@ try {
 </configuration>
 "@
                 [System.IO.File]::WriteAllText($PluginConfigPath, $ConfigContent, [System.Text.Encoding]::UTF8)
-                Write-Host "  ✓ $PluginName\$PluginName.dll.config (generated)" -ForegroundColor Gray
+                Write-Host "  ✓ $PluginFolder\$PluginProject.dll.config (generated)" -ForegroundColor Gray
             }
         }
     }
@@ -494,6 +619,7 @@ try {
         if (Test-Path $SourcePath) {
             Copy-Item $SourcePath $TargetPath
             Write-Host "  ✓ $($ConfigFile.Target)" -ForegroundColor Gray
+            Write-Host "    Source: $SourcePath" -ForegroundColor DarkGray
         } else {
             Write-Warning "Config file not found: $($ConfigFile.Source)"
         }
@@ -573,6 +699,7 @@ try {
         if (Test-Path $SourcePath) {
             Copy-Item $SourcePath $TestLoadDir
             Write-Host "  ✓ testload\$TestFile" -ForegroundColor Gray
+            Write-Host "    Source: $SourcePath" -ForegroundColor DarkGray
         } else {
             Write-Warning "Test load file not found: $TestFile"
         }

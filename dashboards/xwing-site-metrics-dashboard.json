@@ -1,0 +1,1512 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 103,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "hiddenSeries": false,
+      "id": 1,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "working_set",
+          "color": "#DEDAF7",
+          "fill": 0,
+          "linewidth": 3,
+          "stack": false,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByNode(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.gen_0_heap_size, 7)"
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "C",
+          "target": "aliasByNode(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.gen_1_heap_size, 7)"
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "D",
+          "target": "aliasByNode(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.gen_2_heap_size, 7)"
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "E",
+          "target": "aliasByNode(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.large_object_heap_size, 7)"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": ".NET GC Memory Usage",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "decbytes",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "decbytes",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "hiddenSeries": false,
+      "id": 2,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasSub(advanced.$Environment.site.$Site.$Server.$Instance.process._total.%_processor_time, 'natasha\\.([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.iis-(i-[^_]+)_([^_]+)_([^\\.]+)\\.([^\\.]+)\\.([^\\.]+)\\.(.+)', '\\4 -- \\8 -- \\9')",
+          "textEditor": true
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "CPU",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": "",
+          "logBase": 1,
+          "max": "400",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 0,
+        "y": 11
+      },
+      "hiddenSeries": false,
+      "id": 3,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_0_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": true,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.allocated_bytes_sec)"
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "B",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.#_gen_0_collections)",
+          "textEditor": false
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Allocations + Gen 0 GCs",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "decbytes",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "none",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 4,
+        "y": 11
+      },
+      "hiddenSeries": false,
+      "id": 4,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_1_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": true,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.allocated_bytes_sec)"
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "B",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.#_gen_1_collections)",
+          "textEditor": false
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Allocations + Gen 1 GCs",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "decbytes",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 8,
+        "y": 11
+      },
+      "hiddenSeries": false,
+      "id": 5,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_2_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": true,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.allocated_bytes_sec)"
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "B",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.#_gen_2_collections)",
+          "textEditor": false
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Allocations + Gen 2 GCs",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "decbytes",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 12,
+        "y": 11
+      },
+      "hiddenSeries": false,
+      "id": 6,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_2_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByNode(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.%_time_in_gc, 4)"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "% Time Spent in GC",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": "",
+          "logBase": 1,
+          "max": "100",
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 16,
+        "y": 11
+      },
+      "hiddenSeries": false,
+      "id": 7,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_2_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByNode(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.#_of_pinned_objects, 4)"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Pinned GC Objects",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "none",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 4,
+        "x": 20,
+        "y": 11
+      },
+      "hiddenSeries": false,
+      "id": 8,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_2_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.#_bytes_in_all_heaps)"
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "B",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_memory._total.#_total_committed_bytes)"
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "C",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance.process._total.private_bytes)"
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "D",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance.process._total.working_set)"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Committed Bytes",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "decbytes",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 9,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_2_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance.process._total.page_faults_sec)",
+          "textEditor": true
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Page Faults",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "none",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 11,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_2_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": true,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_exceptions._total.#_of_exceps_thrown___sec)"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": ".NET Exceptions/sec",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 12,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_2_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance._net_clr_locksandthreads._total.contention_rate___sec)"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": ".NET Contentions/sec",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "hiddenSeries": false,
+      "id": 13,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_2_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "A",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance.web_service._total.bytes_sent_sec)"
+        },
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "B",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance.web_service._total.bytes_received_sec)"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Bytes Sent/Received",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "decbytes",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "graphite",
+        "uid": "jYX8P62Sz"
+      },
+      "editable": true,
+      "error": false,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "hiddenSeries": false,
+      "id": 16,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": false,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "9.4.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [
+        {
+          "alias": "#_gen_2_collections",
+          "lines": false,
+          "points": true,
+          "yaxis": 2
+        }
+      ],
+      "spaceLength": 10,
+      "stack": true,
+      "steppedLine": false,
+      "targets": [
+        {
+          "datasource": {
+            "type": "graphite",
+            "uid": "jYX8P62Sz"
+          },
+          "refId": "C",
+          "target": "aliasByMetric(advanced.$Environment.site.$Site.$Server.$Instance.w3svc_w3wp._total.active_requests)"
+        }
+      ],
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Requests Per Second",
+      "tooltip": {
+        "msResolution": false,
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
+    }
+  ],
+  "refresh": "5s",
+  "revision": 1,
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "site",
+    "memory",
+    "cpu",
+    "exceptions",
+    "locks",
+    "threads",
+    "web-service",
+    "requests"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "production",
+          "value": "production"
+        },
+        "datasource": {
+          "type": "graphite",
+          "uid": "jYX8P62Sz"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "Environment",
+        "options": [],
+        "query": "advanced.*",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "*",
+        "current": {
+          "selected": false,
+          "text": "rfq_8c57f39b",
+          "value": "rfq_8c57f39b"
+        },
+        "datasource": {
+          "type": "graphite",
+          "uid": "jYX8P62Sz"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
+        "name": "Site",
+        "options": [],
+        "query": "advanced.$Environment.site.*",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "*",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "graphite",
+          "uid": "jYX8P62Sz"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
+        "name": "Server",
+        "options": [],
+        "query": "advanced.$Environment.site.$Site.*",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "*",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "graphite",
+          "uid": "jYX8P62Sz"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "multi": false,
+        "name": "Instance",
+        "options": [],
+        "query": "advanced.$Environment.site.$Site.$Server.*",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Xwing Site Metrics",
+  "uid": "xwing-site-metrics-494b2644",
+  "version": 6,
+  "weekStart": ""
+}

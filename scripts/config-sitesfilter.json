@@ -48,6 +48,12 @@
                 "w3svc"
             ],
             "PreserveOriginal": false
+        },
+        "HTTP Service Request Queues": {
+            "Filters": [
+                "w3svc"
+            ],
+            "PreserveOriginal": false
         }
     }
 }

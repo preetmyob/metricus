@@ -63,6 +63,10 @@
         "Requests/Sec",
         "Request Execution Time",
         "Requests Executing",
+        "Requests In Application Queue",
+        "Requests Timed Out",
+        "Requests Failed",
+        "Request Wait Time",
         "% Managed Processor Time (estimated)"
       ]
     },
@@ -75,6 +79,15 @@
         "Request Execution Time",
         "Requests Current",
         "Requests Queued"
+      ]
+    },
+    {
+      "name": "HTTP Service Request Queues",
+      "dynamic": false,
+      "counters": [
+        "RejectedRequests",
+        "ArrivalRate",
+        "CurrentQueueSize"
       ]
     },
     {
@@ -169,7 +182,10 @@
       "name": "W3SVC_W3WP",
       "dynamic": true,
       "counters": [
-        "Active Requests"
+        "Active Requests",
+        "Requests / Sec",
+        "Active Threads Count",
+        "Total Threads"
       ]
     }
   ]

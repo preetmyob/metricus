@@ -1917,7 +1917,7 @@
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
-          "calcs": ["lastNotNull"],
+          "calcs": ["mean"],
           "fields": ""
         },
         "showThresholdLabels": false,

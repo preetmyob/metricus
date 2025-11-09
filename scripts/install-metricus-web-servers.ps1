@@ -74,16 +74,34 @@ function Remove-MetricusService {
         }
         
         Write-Log "Deleting Metricus service..."
-        sc.exe delete 'metricus' | Out-Null
+        $deleteResult = sc.exe delete 'metricus' 2>&1
         
-        # Wait for service to be deleted
+        if ($deleteResult -like "*marked for deletion*") {
+            Write-Log "Service marked for deletion, attempting WMI force delete..." -Level "WARN"
+            $wmiService = Get-WmiObject -Class Win32_Service -Filter "Name='metricus'" -ErrorAction SilentlyContinue
+            if ($wmiService) {
+                $wmiService.Delete() | Out-Null
+                Write-Log "WMI delete attempted"
+            }
+        }
+        
+        # Wait for service to be deleted (can take time if handles are open)
         $retries = 0
-        while ((Get-Service -Name "metricus" -ErrorAction SilentlyContinue) -and $retries -lt 10) {
-            Start-Sleep -Seconds 1
+        $maxRetries = 30
+        while ((Get-Service -Name "metricus" -ErrorAction SilentlyContinue) -and $retries -lt $maxRetries) {
+            if ($retries -eq 0) {
+                Write-Log "Waiting for service deletion to complete..."
+            }
+            Start-Sleep -Seconds 2
             $retries++
         }
         
-        Write-Log "Metricus service removed successfully"
+        if (Get-Service -Name "metricus" -ErrorAction SilentlyContinue) {
+            Write-Log "Service still exists after $maxRetries retries. May require server restart." -Level "WARN"
+            throw "Failed to delete Metricus service. It may be locked. Try restarting the server."
+        } else {
+            Write-Log "Metricus service removed successfully"
+        }
     } else {
         Write-Log "No existing Metricus service found"
     }
@@ -184,16 +202,27 @@ function Install-MetricusService {
     }
     
     Write-Log "Starting Metricus service (initial start)..."
-    Start-Service -Name 'metricus'
+    try {
+        Start-Service -Name 'metricus' -ErrorAction Stop
+    } catch {
+        Write-Log "Failed to start service: $_" -Level "ERROR"
+        Write-Log "Checking service status and logs..." -Level "WARN"
+        $Service = Get-Service -Name 'metricus' -ErrorAction SilentlyContinue
+        if ($Service) {
+            Write-Log "Service status: $($Service.Status)" -Level "WARN"
+        }
+        throw
+    }
     
     # Verify service is running
     Start-Sleep -Seconds 2
     $Service = Get-Service -Name 'metricus'
-    if ($Service.Status -eq 'Running') {
-        Write-Log "Metricus service started successfully" -Level "SUCCESS"
-    } else {
+    if ($Service.Status -ne 'Running') {
+        Write-Log "Service failed to start. Status: $($Service.Status)" -Level "ERROR"
+        Write-Log "Check Windows Event Viewer (Application log) for Metricus errors" -Level "ERROR"
         throw "Metricus service failed to start. Status: $($Service.Status)"
     }
+    Write-Log "Metricus service started successfully" -Level "SUCCESS"
     
     Write-Log "Waiting 20 seconds for initial startup..."
     Start-Sleep -Seconds 20
